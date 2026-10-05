@@ -1,9 +1,8 @@
 import feedparser
-from dataclasses import dataclass
+from typing_extensions import TypedDict
 
 
-@dataclass
-class WSBPost:
+class WSBPost(TypedDict):
     rank: int
     title: str
     url: str
@@ -35,5 +34,5 @@ def get_wsb_top_posts(limit: int = 10) -> list[WSBPost]:
 if __name__ == "__main__":
     posts = get_wsb_top_posts()
     for post in posts:
-        print(f"#{post.rank} {post.title}")
-        print(f"  {post.url}\n")
+        print(f"#{post['rank']} {post['title']}")
+        print(f"  {post['url']}\n")
