@@ -1,5 +1,9 @@
+from agent import agent
+
+
 def main():
-    print("Hello from market-sentiment-agent!")
+    result = agent.invoke({})
+    print(result["newsletter"])
 
 
 if __name__ == "__main__":
