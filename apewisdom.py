@@ -1,5 +1,7 @@
 import requests
 
+EXCLUDED_TICKERS = {"SPY", "QQQ", "IWM", "DIA", "VOO", "VTI", "TQQQ", "SQQQ", "SPXL", "SPXS"}
+
 
 def get_wsb_trending(limit: int = 10) -> list[dict]:
     """Fetch the top mentioned tickers on r/wallstreetbets."""
@@ -9,6 +11,31 @@ def get_wsb_trending(limit: int = 10) -> list[dict]:
 
     results = response.json().get("results", [])
     return results[:limit]
+
+
+def pick_candidates(stocks: list[dict], n: int = 10, min_mentions: int = 10) -> list[dict]:
+    """Top n by mentions plus top n by day-over-day change, excluding broad-market funds."""
+    eligible = [s for s in stocks if s["ticker"].upper() not in EXCLUDED_TICKERS]
+
+    def mentions(s: dict) -> int:
+        return int(s.get("mentions") or 0)
+
+    def previous(s: dict) -> int:
+        return int(s.get("mentions_24h_ago") or 0)
+
+    def change_key(s: dict) -> tuple[float, int]:
+        return (mentions(s) / max(previous(s), 1), mentions(s) - previous(s))
+
+    top_mentions = sorted(eligible, key=mentions, reverse=True)[:n]
+    movers = [s for s in eligible if mentions(s) >= min_mentions]
+    top_changed = sorted(movers, key=change_key, reverse=True)[:n]
+
+    picked: dict[str, dict] = {}
+    for reason, group in (("mentions", top_mentions), ("change", top_changed)):
+        for stock in group:
+            entry = picked.setdefault(stock["ticker"], {**stock, "picked_by": []})
+            entry["picked_by"].append(reason)
+    return list(picked.values())
 
 
 def get_ticker_sentiment(ticker: str, filter: str = "wallstreetbets") -> dict | None:

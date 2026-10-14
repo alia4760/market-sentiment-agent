@@ -12,3 +12,13 @@ Copy `.env.template.md` to `.env` and add your `JEV_API_KEY`, then:
 ```
 uv run main.py
 ```
+
+## Neon (database and storage)
+The Neon config lives in `neon_database/` (`neon.ts` declares the services). Run Neon CLI commands from inside that folder. To refresh the Neon variables in the root `.env`:
+
+```
+cd neon_database
+neon env pull --file ../.env
+```
+
+Only run `neon deploy` after changing `neon.ts`.

@@ -7,7 +7,7 @@ import operator
 import os
 
 from reddit import WSBPost, get_wsb_top_posts
-from apewisdom import get_wsb_trending
+from apewisdom import get_wsb_trending, pick_candidates
 
 load_dotenv()
 
@@ -33,7 +33,7 @@ class State(TypedDict):
 def fetch(state: State) -> dict:
     return {
         "posts": get_wsb_top_posts(),
-        "trending": get_wsb_trending(),
+        "trending": pick_candidates(get_wsb_trending(limit=50)),
     }
 
 
@@ -64,7 +64,11 @@ def score(state: State) -> dict:
 def summarize(state: State) -> dict:
     lines = ["=== Market Sentiment Newsletter ===", "", "Trending tickers:"]
     for stock in state["trending"]:
-        lines.append(f"  {stock['ticker']}: {stock['mentions']} mentions")
+        picked = "+".join(stock["picked_by"])
+        lines.append(
+            f"  {stock['ticker']}: {stock['mentions']} mentions "
+            f"(was {stock.get('mentions_24h_ago', 'N/A')}) [{picked}]"
+        )
 
     lines.append("")
     lines.append("WSB post sentiment:")
