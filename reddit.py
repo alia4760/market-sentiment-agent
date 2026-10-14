@@ -1,3 +1,6 @@
+import html
+import re
+
 import feedparser
 from typing_extensions import TypedDict
 
@@ -8,6 +11,15 @@ class WSBPost(TypedDict):
     url: str
     published: str
     author: str
+    body: str
+
+
+def _extract_body(summary_html: str) -> str:
+    match = re.search(r'<div class="md">(.*?)</div>', summary_html, re.DOTALL)
+    if not match:
+        return ""
+    text = re.sub(r"<[^>]+>", " ", match.group(1))
+    return re.sub(r"\s+", " ", html.unescape(text)).strip()
 
 
 def get_wsb_top_posts(limit: int = 10) -> list[WSBPost]:
@@ -26,6 +38,7 @@ def get_wsb_top_posts(limit: int = 10) -> list[WSBPost]:
                 url=entry.link,
                 published=entry.get("published", "N/A"),
                 author=entry.get("author", "N/A"),
+                body=_extract_body(entry.get("summary", "")),
             )
         )
     return posts
