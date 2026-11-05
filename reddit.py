@@ -23,11 +23,17 @@ def _extract_body(summary_html: str) -> str:
 
 
 def get_wsb_top_posts(limit: int = 10) -> list[WSBPost]:
-    """Fetch the top posts from r/wallstreetbets via RSS."""
+    """Fetch the top posts from r/wallstreetbets via RSS. Raises if Reddit refuses or returns nothing."""
     feed = feedparser.parse(
         "https://www.reddit.com/r/wallstreetbets/top/.rss?t=day",
         request_headers={"User-Agent": "market-sentiment-agent/0.1"},
     )
+
+    status = feed.get("status")
+    if status != 200:
+        raise RuntimeError(f"Reddit RSS returned HTTP {status} (429 means rate-limited)")
+    if not feed.entries:
+        raise RuntimeError("Reddit RSS returned no posts")
 
     posts = []
     for i, entry in enumerate(feed.entries[:limit]):

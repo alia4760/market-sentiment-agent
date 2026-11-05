@@ -17,7 +17,7 @@ Save each day's results so we can check them later.
 - Daily snapshot per ticker: date, mentions and change, bullish/bearish share, number of posts, price on the day.
 - Later, compare the price then vs now at 1 week, 1 month and 3 months, against SPY so market-wide moves don't look like wins.
 - Chart how each call played out, e.g. a static page built from the saved data.
-- Storage: Neon Postgres, plain SQL. `trending_snapshots` exists; `post_scores` is next.
+- Storage: Neon Postgres, plain SQL. Tables: `trending_snapshots`, `post_scores`, `newsletters`.
 - Start saving from day one. Reddit sentiment can't be backfilled, and a 3-month check needs 3 months of data.
 
 ## Eval
@@ -26,7 +26,6 @@ Save each day's results so we can check them later.
 - Is Jev's confidence calibrated? Baseline done in `evals/` (60 finance tweets/headlines, about 83% accurate; labels under 0.5 confidence are right less than half the time). Next: hand-label 30-50 real WSB posts and rerun.
 
 ## Next
-- Save step: `post_scores` table and a `save` node, so each run is stored.
 - Daily GitHub Action to run the agent.
 - Ticker extraction: link each post to the tickers it discusses.
 - Ticker-first scoring: gather posts per hot ticker and aggregate sentiment per ticker.
