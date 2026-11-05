@@ -16,7 +16,7 @@ WORD_TICKERS = {
 def get_wsb_trending(limit: int = 10) -> list[dict]:
     """Fetch the top mentioned tickers on r/wallstreetbets."""
     url = "https://apewisdom.io/api/v1.0/filter/wallstreetbets"
-    response = requests.get(url, headers={"User-Agent": "market-sentiment-agent/0.1"})
+    response = requests.get(url, headers={"User-Agent": "market-sentiment-agent/0.1"}, timeout=30)
     response.raise_for_status()
 
     results = response.json().get("results", [])
@@ -55,7 +55,7 @@ def get_ticker_sentiment(ticker: str, filter: str = "wallstreetbets") -> dict | 
     page = 1
     while True:
         url = f"https://apewisdom.io/api/v1.0/filter/{filter}/page/{page}"
-        response = requests.get(url, headers={"User-Agent": "market-sentiment-agent/0.1"})
+        response = requests.get(url, headers={"User-Agent": "market-sentiment-agent/0.1"}, timeout=30)
         response.raise_for_status()
 
         data = response.json()

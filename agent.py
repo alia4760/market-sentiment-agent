@@ -41,19 +41,24 @@ class State(TypedDict):
 
 
 def _error(stage: str, e: Exception) -> dict:
-    log.error("%s failed: %s", stage, e)
+    log.error("%s failed: %s", stage, e, exc_info=e)
     return {"stage": stage, "message": str(e)}
 
 
 def load_stored(state: State) -> dict:
     """If today's newsletter is already in the database, reuse it."""
     if state.get("refresh"):
+        log.info("Refresh requested; skipping the stored-newsletter check")
         return {}
     try:
         text = get_newsletter()
     except Exception as e:
         return {"errors": [_error("db", e)]}
-    return {"newsletter": text, "from_store": True} if text else {}
+    if text:
+        log.info("Found today's stored newsletter; reusing it (use --refresh to rebuild)")
+        return {"newsletter": text, "from_store": True}
+    log.info("No stored newsletter for today; running the full pipeline")
+    return {}
 
 
 def after_load(state: State) -> str:
@@ -64,6 +69,7 @@ def fetch(state: State) -> dict:
     update: dict = {"errors": []}
     try:
         update["posts"] = get_wsb_top_posts()
+        log.info("Reddit: fetched %d posts", len(update["posts"]))
     except Exception as e:
         update["errors"].append(_error("reddit", e))
     try:
@@ -72,10 +78,15 @@ def fetch(state: State) -> dict:
             raise RuntimeError("ApeWisdom returned no tickers")
         update["top_tickers"] = top
         update["trending"] = pick_candidates(top)
+        log.info(
+            "ApeWisdom: fetched %d tickers, picked %d candidates: %s",
+            len(top), len(update["trending"]), ", ".join(c["ticker"] for c in update["trending"]),
+        )
     except Exception as e:
         update["errors"].append(_error("apewisdom", e))
     try:
         update["tradestie"] = get_tradestie()
+        log.info("Tradestie: fetched %d tickers", len(update["tradestie"]))
     except Exception as e:
         update["errors"].append(_error("tradestie", e))
     return update
@@ -85,9 +96,13 @@ def fetch_prices(state: State) -> dict:
     tickers = {s["ticker"] for s in state.get("top_tickers") or []}
     tickers |= {r["ticker"] for r in state.get("tradestie") or []}
     if not tickers:
+        log.warning("yfinance: no tickers to price (ApeWisdom and Tradestie both empty)")
         return {}
     try:
-        return {"prices": get_prices(sorted(tickers))}
+        log.info("yfinance: requesting prices for %d tickers", len(tickers))
+        rows = get_prices(sorted(tickers))
+        log.info("yfinance: got %d price rows for %d tickers", len(rows), len({r["ticker"] for r in rows}))
+        return {"prices": rows}
     except Exception as e:
         return {"errors": [_error("prices", e)]}
 
@@ -98,9 +113,14 @@ def _post_text(post: WSBPost) -> str:
 
 def score(state: State) -> dict:
     posts = state.get("posts") or []
-    if not posts or state.get("collect_only"):
+    if state.get("collect_only"):
+        log.info("Jev: skipped (collect-only run)")
+        return {}
+    if not posts:
+        log.warning("Jev: no posts to score")
         return {}
     try:
+        log.info("Jev: scoring %d posts", len(posts))
         results = classify_sentiment([_post_text(post) for post in posts])
     except Exception as e:
         return {"errors": [_error("jev", e)]}
@@ -108,6 +128,7 @@ def score(state: State) -> dict:
         {"title": post["title"], "url": post["url"], **result}
         for post, result in zip(posts, results)
     ]
+    log.info("Jev: scored %d posts", len(scores))
     return {"scores": scores}
 
 
@@ -161,16 +182,25 @@ def save(state: State) -> dict:
     errors = []
     try:
         if state.get("top_tickers"):
-            save_trending(state["top_tickers"], state["trending"])
+            n = save_trending(state["top_tickers"], state["trending"])
+            log.info("Neon: saved %d rows to trending_snapshots", n)
         if state.get("tradestie"):
-            save_tradestie(state["tradestie"])
+            n = save_tradestie(state["tradestie"])
+            log.info("Neon: saved %d rows to tradestie_snapshots", n)
         if state.get("prices"):
-            save_prices(state["prices"])
+            n = save_prices(state["prices"])
+            log.info("Neon: saved %d rows to daily_prices", n)
         if state.get("posts"):
-            save_post_scores(state["posts"], state.get("scores") or [])
+            n = save_post_scores(state["posts"], state.get("scores") or [])
+            log.info("Neon: saved %d rows to post_scores", n)
         # Only a complete newsletter is stored, so a rerun never reuses one with gaps.
-        if not state.get("errors") and not state.get("collect_only"):
+        if state.get("errors"):
+            log.warning("Neon: newsletter not stored because earlier stages had errors")
+        elif state.get("collect_only"):
+            log.info("Neon: newsletter not stored (collect-only run)")
+        else:
             save_newsletter(state["newsletter"])
+            log.info("Neon: saved today's newsletter")
     except Exception as e:
         errors.append(_error("db", e))
     return {"errors": errors}

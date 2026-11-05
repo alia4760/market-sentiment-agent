@@ -1,4 +1,8 @@
+import logging
+
 import yfinance as yf
+
+log = logging.getLogger(__name__)
 
 
 def get_prices(tickers: list[str], period: str = "5d", start=None, end=None) -> list[dict]:
@@ -14,10 +18,15 @@ def get_prices(tickers: list[str], period: str = "5d", start=None, end=None) -> 
     )
     available = set(df.columns.get_level_values(0)) if len(df.columns) else set()
     rows = []
+    missing = []
     for ticker in tickers:
         if ticker not in available:
+            missing.append(ticker)
             continue
         sub = df[ticker][["Close", "Volume"]].dropna(subset=["Close"])
+        if sub.empty:
+            missing.append(ticker)
+            continue
         for day, r in sub.iterrows():
             rows.append(
                 {
@@ -27,6 +36,8 @@ def get_prices(tickers: list[str], period: str = "5d", start=None, end=None) -> 
                     "volume": int(r["Volume"]) if r["Volume"] == r["Volume"] else None,
                 }
             )
+    if missing:
+        log.warning("yfinance had no data for %d tickers: %s", len(missing), ", ".join(missing))
     if not rows:
         raise RuntimeError("yfinance returned no prices")
     return rows

@@ -14,6 +14,7 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     logging.getLogger("httpx2").setLevel(logging.WARNING)
+    logging.getLogger("yfinance").setLevel(logging.CRITICAL)  # prices.py logs missing tickers itself
 
     result = agent.invoke({"refresh": args.refresh, "collect_only": args.collect_only})
     print(result["newsletter"])
@@ -21,6 +22,8 @@ def main():
     errors = result.get("errors", [])
     if result.get("from_store"):
         print("\n(reused today's stored newsletter)", file=sys.stderr)
+    if not errors:
+        logging.getLogger("main").info("Run finished cleanly")
     if errors:
         print("\nRun finished with errors:", file=sys.stderr)
         for err in errors:

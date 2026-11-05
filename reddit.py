@@ -2,6 +2,7 @@ import html
 import re
 
 import feedparser
+import requests
 from typing_extensions import TypedDict
 
 
@@ -24,14 +25,16 @@ def _extract_body(summary_html: str) -> str:
 
 def get_wsb_top_posts(limit: int = 10) -> list[WSBPost]:
     """Fetch the top posts from r/wallstreetbets via RSS. Raises if Reddit refuses or returns nothing."""
-    feed = feedparser.parse(
+    response = requests.get(
         "https://www.reddit.com/r/wallstreetbets/top/.rss?t=day",
-        request_headers={"User-Agent": "market-sentiment-agent/0.1"},
+        headers={"User-Agent": "market-sentiment-agent/0.1"},
+        timeout=30,
     )
-
-    status = feed.get("status")
-    if status != 200:
-        raise RuntimeError(f"Reddit RSS returned HTTP {status} (429 means rate-limited)")
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"Reddit RSS returned HTTP {response.status_code} (429 means rate-limited)"
+        )
+    feed = feedparser.parse(response.content)
     if not feed.entries:
         raise RuntimeError("Reddit RSS returned no posts")
 
