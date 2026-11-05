@@ -38,6 +38,25 @@ TABLES = [
     )
     """,
     """
+    create table if not exists tradestie_snapshots (
+        snapshot_date date not null,
+        ticker text not null,
+        sentiment text,
+        sentiment_score double precision,
+        comments int,
+        primary key (snapshot_date, ticker)
+    )
+    """,
+    """
+    create table if not exists daily_prices (
+        price_date date not null,
+        ticker text not null,
+        close double precision,
+        volume bigint,
+        primary key (price_date, ticker)
+    )
+    """,
+    """
     create table if not exists newsletters (
         run_date date primary key,
         text text not null,
@@ -134,6 +153,45 @@ def save_post_scores(posts: list[dict], scores: list[dict]) -> int:
         with conn.cursor() as cur:
             cur.executemany(INSERT_POST, rows)
     return len(rows)
+
+
+def save_tradestie(rows: list[dict], snapshot_date: date | None = None) -> int:
+    """Replace one day's Tradestie snapshot (defaults to today, UTC)."""
+    day = snapshot_date or today()
+    values = [
+        (day, r["ticker"], r.get("sentiment"), r.get("sentiment_score"), _int(r.get("no_of_comments")))
+        for r in rows
+    ]
+    with get_db() as conn:
+        _ensure_tables(conn)
+        conn.execute("delete from tradestie_snapshots where snapshot_date = %s", (day,))
+        with conn.cursor() as cur:
+            cur.executemany(
+                "insert into tradestie_snapshots values (%s, %s, %s, %s, %s)", values
+            )
+    return len(values)
+
+
+def tradestie_dates() -> set[date]:
+    with get_db() as conn:
+        _ensure_tables(conn)
+        return {r[0] for r in conn.execute("select distinct snapshot_date from tradestie_snapshots")}
+
+
+def save_prices(rows: list[dict]) -> int:
+    """Upsert daily prices; past prices are facts, so newer data just overwrites."""
+    values = [(r["date"], r["ticker"], r["close"], r["volume"]) for r in rows]
+    with get_db() as conn:
+        _ensure_tables(conn)
+        with conn.cursor() as cur:
+            cur.executemany(
+                """insert into daily_prices (price_date, ticker, close, volume)
+                   values (%s, %s, %s, %s)
+                   on conflict (price_date, ticker) do update set
+                       close = excluded.close, volume = excluded.volume""",
+                values,
+            )
+    return len(values)
 
 
 def get_newsletter(run_date: date | None = None) -> str | None:

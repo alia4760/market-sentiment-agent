@@ -14,7 +14,7 @@ uv run main.py             # reuses today's stored newsletter if there is one
 uv run main.py --refresh   # rebuild it
 ```
 
-A stage that fails is recorded and the newsletter still prints, but the run exits non-zero so a scheduled job shows as failed: 2 = Reddit, 3 = ApeWisdom, 4 = Jev, 5 = database. Only a clean run stores the newsletter.
+A stage that fails is recorded and the newsletter still prints, but the run exits non-zero so a scheduled job shows as failed: 2 = Reddit, 3 = ApeWisdom, 4 = Jev, 5 = database, 6 = Tradestie, 7 = prices. Only a clean run stores the newsletter.
 
 ## What it stores
 Postgres tables in Neon, created on first use (`storage.py`). A rerun on the same day replaces that day's rows.
