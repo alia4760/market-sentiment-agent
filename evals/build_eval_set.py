@@ -34,7 +34,7 @@ def fetch_rows() -> list[dict]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--per-label", type=int, default=15)
+    parser.add_argument("--per-label", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 

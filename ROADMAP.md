@@ -17,16 +17,17 @@ Save each day's results so we can check them later.
 - Daily snapshot per ticker: date, mentions and change, bullish/bearish share, number of posts, price on the day.
 - Later, compare the price then vs now at 1 week, 1 month and 3 months, against SPY so market-wide moves don't look like wins.
 - Chart how each call played out, e.g. a static page built from the saved data.
-- Storage: undecided, SQLite or Neon (free hosted Postgres). Use plain SQL so either works. Decide when we get here.
+- Storage: Neon Postgres, plain SQL. `trending_snapshots` exists; `post_scores` is next.
 - Start saving from day one. Reddit sentiment can't be backfilled, and a 3-month check needs 3 months of data.
 
 ## Eval
 - Does sentiment add anything beyond mention volume? Research on WSB suggests volume often does as well or better, so mention volume is the baseline.
 - Compare Jev against a local model and a small LLM.
-- Is Jev's confidence calibrated? Start by hand-labelling about 20 titles.
+- Is Jev's confidence calibrated? Baseline done in `evals/` (60 finance tweets/headlines, about 83% accurate; labels under 0.5 confidence are right less than half the time). Next: hand-label 30-50 real WSB posts and rerun.
 
 ## Next
-- Pull the top 50 from ApeWisdom (currently capped at 10) and build the candidate list: top 10 by mentions plus top 10 by change.
+- Save step: `post_scores` table and a `save` node, so each run is stored.
+- Daily GitHub Action to run the agent.
 - Ticker extraction: link each post to the tickers it discusses.
 - Ticker-first scoring: gather posts per hot ticker and aggregate sentiment per ticker.
 - Filter noise: separate real analysis from brags, memes and news.
@@ -39,6 +40,9 @@ Save each day's results so we can check them later.
 - Google Trends or Wikipedia pageviews as a cheap attention baseline.
 - News per ticker (Tavily), to explain why it's hot. Run it only for the few hottest tickers each day, to stay inside the free tier.
 - Earnings calendar, since it explains most spikes.
+- LangSmith tracing for the graph runs (free Developer plan: 5,000 traces a month, 14-day retention, so screenshot anything worth keeping). Add after the daily run is working.
+- Biggest market movers from yfinance, as a label (hot and already moving vs hot but not yet) and to test whether Reddit leads or lags price. Save the daily movers list too.
+- Maybe, low priority: save eval runs. Either LangSmith (its experiments feature may fit eval runs better than Postgres) or a small Postgres table. The CSVs in git are enough for now.
 - Dashboard of prediction accuracy over time, and alerts when a ticker crosses a threshold.
 
 ## Later: earnings calls
