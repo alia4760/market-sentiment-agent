@@ -1,0 +1,46 @@
+id,text,label,source
+1,"Here's why British comedian Sacha Baron Cohen calls social media ""the greatest propaganda machine in history"" https://t.co/fJ2EAQEAmF",neutral,zeroshot/twitter-financial-news-sentiment/validation#1152
+2,Roku -5.1% after filing to offer up to 1M shares,bearish,zeroshot/twitter-financial-news-sentiment/validation#2275
+3,Progyny started at overweight with $26 stock price target at J.P. Morgan,bullish,zeroshot/twitter-financial-news-sentiment/validation#76
+4,Wall Street closes up more than 7% on hopes of slowing coronavirus deaths https://t.co/6LFK79ATeS https://t.co/P5K3BNR7Uf,bullish,zeroshot/twitter-financial-news-sentiment/validation#1746
+5,Forescout shares halted for the news,neutral,zeroshot/twitter-financial-news-sentiment/validation#2376
+6,Barr acknowledges for the first time that Rudy Giuliani has been giving the Justice Department information he colle… https://t.co/IfJxvcsYnF,neutral,zeroshot/twitter-financial-news-sentiment/validation#1780
+7,GE’s ‘Beat-and-Raise Story’ Leads Longtime Skeptic to Upgrade,bullish,zeroshot/twitter-financial-news-sentiment/validation#1986
+8,LendingTree price target cut to $350 from $400 at SunTrust Robinson Humphrey,bearish,zeroshot/twitter-financial-news-sentiment/validation#16
+9,Wayfair initiated as hold with $95 price target at SunTrust Robinson Humphrey,neutral,zeroshot/twitter-financial-news-sentiment/validation#105
+10,"Exxon: Shale Production Growth is Through the Roof, and It's Just Getting Started",bullish,zeroshot/twitter-financial-news-sentiment/validation#782
+11,AM Best Revises Outlooks to Positive for Pacífico Compañía de Seguros y Reaseguros S.A. https://t.co/BGvmfeHKod https://t.co/gvtIQzMVbf,bullish,zeroshot/twitter-financial-news-sentiment/validation#42
+12,Kohl's Q3 revenue $4.625 bln vs. $4.628 bln; FactSet consensus $4.399 bln,bearish,zeroshot/twitter-financial-news-sentiment/validation#852
+13,"China Solar Group Flags Raw Material, Labor Shortages on Virus",bearish,zeroshot/twitter-financial-news-sentiment/validation#189
+14,GM not liable for punitive damages in ignition switch cases: U.S. appeals court,bullish,zeroshot/twitter-financial-news-sentiment/validation#1467
+15,"Stocks making the biggest moves premarket: Home Depot, Kohl's, Disney, Broadcom & more",neutral,zeroshot/twitter-financial-news-sentiment/validation#2385
+16,"Qatar, the world’s biggest supplier of liquefied natural gas, plans to boost output capacity by almost two thirds https://t.co/D8XYpUKFl6",bullish,zeroshot/twitter-financial-news-sentiment/validation#789
+17,Bumrungrad Hospital Public : Notification of the joint new business model #BumrungradHospitalPublic #Stock… https://t.co/QhvKqiE4Cd,neutral,zeroshot/twitter-financial-news-sentiment/validation#1070
+18,"As Kohl's shares plunge, Cramer calls out CEO for glossing over why earnings missed estimates",bearish,zeroshot/twitter-financial-news-sentiment/validation#2250
+19,Intelsat cut to Market Perform at Raymond James,bearish,zeroshot/twitter-financial-news-sentiment/validation#15
+20,"Zoom shares slip over security concerns, rising competition https://t.co/u0l97LVQDa https://t.co/dcVT5Zzh2L",bearish,zeroshot/twitter-financial-news-sentiment/validation#2294
+21,OPEC+ Extends Virus Crisis Talks as Russia Resists Oil Cuts,neutral,zeroshot/twitter-financial-news-sentiment/validation#809
+22,"Volkswagen cuts profit, sales forecasts as autos downturn bites",bearish,zeroshot/twitter-financial-news-sentiment/validation#867
+23,S&P 500 Price Forecast – Stock Markets Break To A Fresh New High - Yahoo Finance,bullish,zeroshot/twitter-financial-news-sentiment/validation#1717
+24,"Black Friday 2019: How scammers use gift cards, hot toy deals to trick you",neutral,zeroshot/twitter-financial-news-sentiment/validation#1063
+25,Hedge Funds Are Selling PennyMac Financial Services Inc (PFSI),bearish,zeroshot/twitter-financial-news-sentiment/validation#1929
+26,"Do Insiders Own Lots Of Shares In The Meet Group, Inc. (NASDAQ:MEET)?",neutral,zeroshot/twitter-financial-news-sentiment/validation#2117
+27,Never lose sight of the big picture. @JimCramer breaks down how he's approaching a market obsessed with the headlin… https://t.co/L49D4iPLH2,neutral,zeroshot/twitter-financial-news-sentiment/validation#1239
+28,"Stock market live updates: Dow futures up 800 points, set to add to 1,600-point Monday rally https://t.co/kOL2DaUNTc",bullish,zeroshot/twitter-financial-news-sentiment/validation#1725
+29,PG&E Loses Half of Financial Backing for Bankruptcy in New Pacts,bearish,zeroshot/twitter-financial-news-sentiment/validation#202
+30,$DBD - Diebold Nixdorf Q4 2019 Earnings Preview https://t.co/fbABq6ow2F,neutral,zeroshot/twitter-financial-news-sentiment/validation#628
+31,intelliHR : Initial Director's Interest Notice #intelliHR #Stock #MarketScreener https://t.co/3SWLeBWsRy https://t.co/YoKYR1jZ9G,neutral,zeroshot/twitter-financial-news-sentiment/validation#372
+32,Lebanon Turns to IMF as Fitch Sounds Alarm on Default,bearish,zeroshot/twitter-financial-news-sentiment/validation#1572
+33,"Hedge Funds Have Never Been This Bullish On Hallmark Financial Services, Inc. (HALL)",bullish,zeroshot/twitter-financial-news-sentiment/validation#1993
+34,All three benchmarks trade in record territory,bullish,zeroshot/twitter-financial-news-sentiment/validation#1696
+35,$SILC: Silicom Limited sees Q1 revs below consensus https://t.co/wGtSELbYrm,bearish,zeroshot/twitter-financial-news-sentiment/validation#841
+36,$NYMT out 1.82 from $1.60 @here,bullish,zeroshot/twitter-financial-news-sentiment/validation#1959
+37,Mahindra Says Coronavirus May Jeopardize India Emissions Rollout,bearish,zeroshot/twitter-financial-news-sentiment/validation#197
+38,Walmart looks to get past dog days of in-house grocery delivery,neutral,zeroshot/twitter-financial-news-sentiment/validation#489
+39,Corporate venture capital deals hit new record as banks invest in fintech competitors https://t.co/yNdMmEYskR,bullish,zeroshot/twitter-financial-news-sentiment/validation#1606
+40,Downgrades 4/7: $AAN $BDN $BECN $BTE $CDEV $CHK $COOP $CPE $CVA $DAN $DOC $DRH $EPR $ESRT $ETM $FAST $FBM $GM $GMS… https://t.co/CMXD50oQxI,bearish,zeroshot/twitter-financial-news-sentiment/validation#12
+41,Equinor Boosts Climate Targets as Oil Output Hits Record,bullish,zeroshot/twitter-financial-news-sentiment/validation#781
+42,UPDATE 1-LivaNova to scrap mitral heart valve device as part of restructuring,neutral,zeroshot/twitter-financial-news-sentiment/validation#481
+43,Free Shipping Is the Key to Amazon's Success,neutral,zeroshot/twitter-financial-news-sentiment/validation#352
+44,International Bancshares Corporation's (NASDAQ:IBOC) 2.6% Dividend Yield Looks Pretty Interesting,bullish,zeroshot/twitter-financial-news-sentiment/validation#556
+45,Boeing supplier Spirit cuts dividend due to 737 MAX crisis,bearish,zeroshot/twitter-financial-news-sentiment/validation#553

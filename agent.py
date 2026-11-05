@@ -1,24 +1,11 @@
 from langchain.messages import AnyMessage
 from typing_extensions import TypedDict, Annotated
 from langgraph.graph import StateGraph, START, END
-from langchain_typesafe import Choice, TypeSafeClassifier
-from dotenv import load_dotenv
 import operator
-import os
 
 from reddit import WSBPost, get_wsb_top_posts
 from apewisdom import get_wsb_trending, pick_candidates
-
-load_dotenv()
-
-SENTIMENT_QUESTION = Choice(
-    instructions="What is the sentiment of this r/wallstreetbets post toward the stocks it discusses?",
-    criteria={
-        "bullish": "Expects or hopes prices will rise; optimistic, buying, long positions.",
-        "bearish": "Expects prices to fall; pessimistic, selling, short positions.",
-        "neutral": "No clear directional view, news-only, or off-topic.",
-    },
-)
+from jev import classify_sentiment
 
 
 class State(TypedDict):
@@ -42,21 +29,10 @@ def _post_text(post: WSBPost) -> str:
 
 
 def score(state: State) -> dict:
-    classifier = TypeSafeClassifier(
-        model="jev-latest", api_key=os.environ["JEV_API_KEY"]
-    )
-    requests = [
-        {"state": _post_text(post), "questions": {"sentiment": SENTIMENT_QUESTION}}
-        for post in state["posts"]
-    ]
-    answers = classifier.batch(requests)
+    results = classify_sentiment([_post_text(post) for post in state["posts"]])
     scores = [
-        {
-            "title": post["title"],
-            "label": answer.choices["sentiment"].choice,
-            "confidence": answer.choices["sentiment"].confidence,
-        }
-        for post, answer in zip(state["posts"], answers)
+        {"title": post["title"], **result}
+        for post, result in zip(state["posts"], results)
     ]
     return {"scores": scores}
 
