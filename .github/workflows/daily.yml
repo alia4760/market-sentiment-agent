@@ -2,7 +2,7 @@ name: Daily run
 
 on:
   schedule:
-    - cron: "0 13 * * *"   # 13:00 UTC = 9:00am ET (summer) / 8:00am ET (winter), pre-market and before the 9:30 open
+    - cron: "47 13 * * *"   # 13:47 UTC = 8:47am ET in winter. In summer time (from March) this becomes 9:47am ET, after the open: change to 47 12. Off the hour because GitHub delays or drops runs at :00
   workflow_dispatch:
 
 jobs:

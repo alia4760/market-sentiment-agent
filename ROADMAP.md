@@ -29,7 +29,7 @@ Save each day's results so we can check them later.
 Goal: a fixed daily report, sent before the US open, that says what to look at today and why.
 
 **Decisions made**
-- **Run time:** 13:00 UTC every day (9:00am ET summer, 8:00am ET winter): pre-market, before the 9:30 open. GitHub cron ignores daylight saving and can start late, so this leaves a buffer. Weekends run too, to keep weekend chatter. Could add a second run just after the open later.
+- **Run time:** 13:47 UTC every day (8:47am ET in winter; change to 12:47 UTC when US summer time starts in March, or it lands after the open; off the hour because GitHub delays or drops runs at :00): pre-market, before the 9:30 open. GitHub cron ignores daylight saving and can start late, so this leaves a buffer. Weekends run too, to keep weekend chatter. Could add a second run just after the open later.
 - **Pre-market prices:** yfinance returns extended-hours bars (4:00am-8:00pm ET) with `prepost=True`. Tested: MU closed near $795 and traded near $776 after hours. Pre-market is thin, so treat it as a hint.
 - **Roles:** facts and numbers come straight from data and fill a fixed template. Jev answers bounded questions (post sentiment, post type, headline catalyst, per-ticker bullish/bearish/mixed). One LLM call writes the short prose and is told to use only the facts it is given, so it cannot invent numbers.
 - **Funnel:** wide scan of about 50 tickers with the cheap sources (ApeWisdom, Tradestie, yfinance, all batched), cut to the top 10, then spend the limited calls (Tavily, Reddit) on those only.
