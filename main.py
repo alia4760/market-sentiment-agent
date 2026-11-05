@@ -9,11 +9,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--refresh", action="store_true",
                         help="rebuild today's newsletter even if one is already stored")
+    parser.add_argument("--collect-only", action="store_true",
+                        help="save the data but skip Jev scoring and don't store a newsletter")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     logging.getLogger("httpx2").setLevel(logging.WARNING)
 
-    result = agent.invoke({"refresh": args.refresh})
+    result = agent.invoke({"refresh": args.refresh, "collect_only": args.collect_only})
     print(result["newsletter"])
 
     errors = result.get("errors", [])

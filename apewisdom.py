@@ -2,6 +2,16 @@ import requests
 
 EXCLUDED_TICKERS = {"SPY", "QQQ", "IWM", "DIA", "VOO", "VTI", "TQQQ", "SQQQ", "SPXL", "SPXS"}
 
+# Words and finance jargon that happen to be tickers. On WSB these almost always mean the word,
+# not the stock, so they are never picked as candidates. A few real companies (ON, DTE, IT) are
+# lost this way; remove one here if you want it back.
+WORD_TICKERS = {
+    "AI", "AGI", "API", "YOU", "IT", "UP", "ON", "AM", "ET", "TX", "HAS", "DON", "WAR", "LOT", "TIL",
+    "FCF", "EPS", "EOD", "RSI", "PPI", "ARR", "WTI", "DTE", "ATH", "DD", "CEO", "IPO", "FOMO",
+    "GOP", "IRS", "EU", "UK", "USA", "NYC", "TV", "CD", "CC", "TA", "MF", "VC", "DC", "FT",
+    "HBM", "RAM", "AAA", "FED", "FDA", "SEC", "GDP", "CPI", "PCE", "ETF", "YOLO", "IMO", "LOL",
+}
+
 
 def get_wsb_trending(limit: int = 10) -> list[dict]:
     """Fetch the top mentioned tickers on r/wallstreetbets."""
@@ -14,8 +24,9 @@ def get_wsb_trending(limit: int = 10) -> list[dict]:
 
 
 def pick_candidates(stocks: list[dict], n: int = 10, min_mentions: int = 10) -> list[dict]:
-    """Top n by mentions plus top n by day-over-day change, excluding broad-market funds."""
-    eligible = [s for s in stocks if s["ticker"].upper() not in EXCLUDED_TICKERS]
+    """Top n by mentions plus top n by day-over-day change, excluding broad-market funds and word-tickers."""
+    skip = EXCLUDED_TICKERS | WORD_TICKERS
+    eligible = [s for s in stocks if s["ticker"].upper() not in skip]
 
     def mentions(s: dict) -> int:
         return int(s.get("mentions") or 0)

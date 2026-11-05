@@ -26,6 +26,7 @@ EXIT_CODES = {"reddit": 2, "apewisdom": 3, "jev": 4, "db": 5, "tradestie": 6, "p
 
 class State(TypedDict):
     refresh: bool               # rebuild even if today's newsletter is stored
+    collect_only: bool          # fetch and save data only; no Jev scoring, no newsletter stored
     from_store: bool            # newsletter came from the database
     posts: list[WSBPost]        # from reddit.py
     top_tickers: list[dict]     # full ApeWisdom top 50
@@ -97,7 +98,7 @@ def _post_text(post: WSBPost) -> str:
 
 def score(state: State) -> dict:
     posts = state.get("posts") or []
-    if not posts:
+    if not posts or state.get("collect_only"):
         return {}
     try:
         results = classify_sentiment([_post_text(post) for post in posts])
@@ -150,7 +151,7 @@ def summarize(state: State) -> dict:
         for item in state["scores"]:
             lines.append(f"  [{item['label']} ({item['confidence']:.2f})] {item['title']}")
     else:
-        lines.append("  (unavailable today)")
+        lines.append("  (skipped: collect-only run)" if state.get("collect_only") else "  (unavailable today)")
 
     return {"newsletter": "\n".join(lines)}
 
@@ -168,7 +169,7 @@ def save(state: State) -> dict:
         if state.get("posts"):
             save_post_scores(state["posts"], state.get("scores") or [])
         # Only a complete newsletter is stored, so a rerun never reuses one with gaps.
-        if not state.get("errors"):
+        if not state.get("errors") and not state.get("collect_only"):
             save_newsletter(state["newsletter"])
     except Exception as e:
         errors.append(_error("db", e))

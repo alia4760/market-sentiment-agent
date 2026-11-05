@@ -26,23 +26,53 @@ Save each day's results so we can check them later.
 - Is Jev's confidence calibrated? Baseline done in `evals/` (60 finance tweets/headlines, about 83% accurate; labels under 0.5 confidence are right less than half the time). Next: hand-label 30-50 real WSB posts and rerun.
 
 ## Next
-- Daily GitHub Action to run the agent.
-- Ticker extraction: link each post to the tickers it discusses.
-- Ticker-first scoring: gather posts per hot ticker and aggregate sentiment per ticker.
-- Filter noise: separate real analysis from brags, memes and news.
-- Cache fetches and fail loudly on empty results (Reddit rate-limits the RSS feed).
-- yfinance price and volume as confirmation, and as the eval target.
+Goal: a fixed daily report, sent before the US open, that says what to look at today and why.
+
+**Decisions made**
+- **Run time:** 13:00 UTC every day (9:00am ET summer, 8:00am ET winter): pre-market, before the 9:30 open. GitHub cron ignores daylight saving and can start late, so this leaves a buffer. Weekends run too, to keep weekend chatter. Could add a second run just after the open later.
+- **Pre-market prices:** yfinance returns extended-hours bars (4:00am-8:00pm ET) with `prepost=True`. Tested: MU closed near $795 and traded near $776 after hours. Pre-market is thin, so treat it as a hint.
+- **Roles:** facts and numbers come straight from data and fill a fixed template. Jev answers bounded questions (post sentiment, post type, headline catalyst, per-ticker bullish/bearish/mixed). One LLM call writes the short prose and is told to use only the facts it is given, so it cannot invent numbers.
+- **Funnel:** wide scan of about 50 tickers with the cheap sources (ApeWisdom, Tradestie, yfinance, all batched), cut to the top 10, then spend the limited calls (Tavily, Reddit) on those only.
+- **Backtest and Jev vs Tradestie wait** until there is more data (see Later).
+
+**Build order**
+1. Daily GitHub Action (written; needs repo secrets, a push, and a first manual run to check Reddit and yfinance work from GitHub's servers).
+2. Word-ticker filter (done, `WORD_TICKERS` in `apewisdom.py`).
+3. Pre-market price and an open-price column in `daily_prices`: prior close to latest pre-market price per ticker.
+4. Earnings dates: `yfinance Ticker.calendar` gives the next date. Flag tickers reporting within a week (APP reported Nov 4, which likely explains its jump).
+5. Ticker extraction: link each post to tickers it mentions (`$MU` cashtags, or uppercase words on the day's ticker list, after the word filter), then aggregate Jev labels per ticker.
+6. Post-type question added to the same Jev call (analysis, news, position, meme, question); keep the useful ones. Score it on a small hand-labelled WSB sample first.
+7. Tavily news for the top few tickers (test 3-4 tickers first, including whether it returns Reddit snippets), with Jev labelling each headline by catalyst: earnings, analyst, legal, product, macro.
+8. Per-ticker evidence packet (attention, price, pre-market, earnings, news, post sentiment) scored by Jev as bullish, bearish or mixed with a confidence.
+9. One LLM call for a short "what is going on" per top ticker plus a market overview (SPY, QQQ pre-market). Save it in `newsletters`.
+10. Ticker label: news-driven, chatter ahead of price, or already moved.
+11. Email the report; `sent_at` in `newsletters` stops double sends.
+
+**Report template (per ticker)**
+```
+MU - news-driven | mentions 108 (was 59) | Tradestie bearish -0.03
+Price: yesterday -7.0%, pre-market -2.4% | Earnings: Dec 23
+Jev: bearish (0.71) | Why: <2 sentences>
+```
+
+**Known gaps**
+- Only 10 posts a day, so most tickers will have 0-1 posts. Searching Reddit per ticker (or Arctic Shift) would help, but Reddit rate-limits and may block GitHub's IPs. Test first.
+- Word filter loses a few real tickers (ON, DTE, IT). Edit the list if needed.
+- Secrets needed by the Action: `DATABASE_URL`, `JEV_API_KEY`. Add `TAVILY_API_KEY` and an LLM key when those steps are built.
 
 ## Ideas
 - More subreddits through ApeWisdom (r/stocks, r/investing, r/options).
 - StockTwits: trending list plus its self-tagged bull/bear labels as a cross-check.
 - Google Trends or Wikipedia pageviews as a cheap attention baseline.
 - News per ticker (Tavily), to explain why it's hot. Run it only for the few hottest tickers each day, to stay inside the free tier.
-- Earnings calendar, since it explains most spikes.
 - LangSmith tracing for the graph runs (free Developer plan: 5,000 traces a month, 14-day retention, so screenshot anything worth keeping). Add after the daily run is working.
 - Biggest market movers from yfinance, as a label (hot and already moving vs hot but not yet) and to test whether Reddit leads or lags price. Save the daily movers list too.
 - Maybe, low priority: save eval runs. Either LangSmith (its experiments feature may fit eval runs better than Postgres) or a small Postgres table. The CSVs in git are enough for now.
 - Dashboard of prediction accuracy over time, and alerts when a ticker crosses a threshold.
+
+## Later
+- Backtest: does attention or sentiment lead price? Needs more days of data than the 3 weeks we have.
+- Jev versus Tradestie: which one lines up better with later price moves. Decides whether Jev's sentiment step earns its place.
 
 ## Later: earnings calls
 Use earnings-call transcripts as a validity check. If Reddit says a ticker is bullish, did management's tone and guidance on the last call support it, and did the stock follow? Research suggests transcript tone carries some return signal, but it is modest and fades quickly. Free transcript APIs vary, so check coverage and limits first. Treat this as a research question; a weak result is still worth writing up.
