@@ -15,10 +15,10 @@ uv run main.py --refresh   # rebuild it
 uv run main.py --collect-only   # save data only, no Jev calls
 ```
 
-A stage that fails is recorded and the newsletter still prints, but the run exits non-zero so a scheduled job shows as failed: 2 = Reddit, 3 = ApeWisdom, 4 = Jev, 5 = database, 6 = Tradestie, 7 = prices. Only a clean run stores the newsletter.
+A stage that fails is recorded and the newsletter still prints, but the run exits non-zero so a scheduled job shows as failed: 2 = Reddit, 3 = ApeWisdom, 4 = Jev, 5 = database, 6 = Tradestie, 7 = prices, 8 = pre-market, 9 = earnings, 10 = Tavily. Only a clean run stores the newsletter.
 
 ## Scheduled run
-`.github/workflows/daily.yml` runs `main.py` every day at 13:47 UTC (8:47am ET in winter; switch to 12:47 UTC when US summer time starts in March). It needs two repo secrets: `DATABASE_URL` and `JEV_API_KEY`. (`--collect-only` is available if you ever want a run with no Jev calls.) A failed stage makes the job fail, so GitHub emails you.
+`.github/workflows/daily.yml` runs `main.py` every day at 13:47 UTC (8:47am ET in winter; switch to 12:47 UTC when US summer time starts in March). It needs three repo secrets: `DATABASE_URL`, `JEV_API_KEY` and `TAVILY_API_KEY`. (`--collect-only` is available if you ever want a run with no Jev calls.) A failed stage makes the job fail, so GitHub emails you.
 
 ## What it stores
 Postgres tables in Neon, created on first use (`storage.py`). A rerun on the same day replaces that day's rows.

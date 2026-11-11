@@ -57,6 +57,17 @@ TABLES = [
     )
     """,
     """
+    create table if not exists ticker_news (
+        run_date date not null,
+        ticker text not null,
+        url text not null,
+        title text,
+        content text,
+        published text,
+        primary key (run_date, ticker, url)
+    )
+    """,
+    """
     create table if not exists newsletters (
         run_date date primary key,
         text text not null,
@@ -189,6 +200,24 @@ def save_prices(rows: list[dict]) -> int:
                    values (%s, %s, %s, %s)
                    on conflict (price_date, ticker) do update set
                        close = excluded.close, volume = excluded.volume""",
+                values,
+            )
+    return len(values)
+
+
+def save_news(news: dict[str, list[dict]]) -> int:
+    """Replace today's saved headlines."""
+    values = [
+        (today(), ticker, a["url"], a["title"], a["content"], a["published"])
+        for ticker, articles in news.items()
+        for a in articles
+    ]
+    with get_db() as conn:
+        _ensure_tables(conn)
+        conn.execute("delete from ticker_news where run_date = %s", (today(),))
+        with conn.cursor() as cur:
+            cur.executemany(
+                "insert into ticker_news values (%s, %s, %s, %s, %s, %s) on conflict do nothing",
                 values,
             )
     return len(values)
