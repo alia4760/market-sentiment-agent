@@ -20,7 +20,7 @@ def reddit_evidence(state: State) -> dict:
         ticker, name = stock["ticker"], html.unescape(stock.get("name") or "")
         entry = {"source": "none", "posts": [], "comments": []}
         try:
-            found = search_ticker(ticker)
+            found = search_ticker(ticker, name)
             if found["posts"] or found["comments"]:
                 entry = {"source": "arctic", **found}
         except Exception as e:

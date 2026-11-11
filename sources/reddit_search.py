@@ -36,10 +36,52 @@ def _get(path: str, params: dict, attempts: int = 3) -> list[dict]:
     raise last
 
 
-def mentions_ticker(text: str, ticker: str) -> bool:
-    """True if the text names the ticker as a word (or $TICKER). Short tickers must be uppercase."""
-    flags = re.IGNORECASE if len(ticker) >= 4 else 0
-    return bool(re.search(rf"(?<![A-Za-z])\$?{re.escape(ticker)}(?![A-Za-z])", text, flags))
+# Tickers that are also everyday words (or very short): a bare mention is not enough evidence.
+COMMON_WORDS = {
+    "a", "all", "any", "are", "ai", "by", "can", "do", "for", "go", "he", "it", "me", "new", "now",
+    "on", "one", "open", "so", "up", "us", "well", "work",
+}
+FINANCE_WORDS = {
+    "call", "calls", "put", "puts", "share", "shares", "stock", "stocks", "earnings", "eps",
+    "guidance", "options", "strike", "ticker", "pt", "position", "positions", "bullish", "bearish",
+    "long", "short", "moon", "rally", "dip", "squeeze", "buy", "bought", "sell", "sold", "hold", "holding",
+    "price", "target", "revenue", "beat", "miss", "gap", "gapping", "green", "red",
+}
+NAME_NOISE = {"inc", "corp", "corporation", "company", "co", "ltd", "plc", "holdings", "group", "the", "class"}
+
+
+def _is_ambiguous(ticker: str) -> bool:
+    return len(ticker) <= 2 or ticker.lower() in COMMON_WORDS
+
+
+def _name_words(name: str, ticker: str) -> set[str]:
+    """Distinctive words of the company name (no suffixes, no common words, not the ticker)."""
+    words = {w.lower() for w in re.findall(r"[A-Za-z]+", name)}
+    return {w for w in words if len(w) >= 4 and w not in NAME_NOISE | COMMON_WORDS and w != ticker.lower()}
+
+
+def mentions_ticker(text: str, ticker: str, name: str = "") -> bool:
+    """True if the text is really about the ticker.
+
+    Distinctive tickers match as a word (or $TICKER). Tickers that are also everyday words
+    (AI, ON, IT, NOW...) count only as $TICKER, or as uppercase within a few words of a finance word
+    ("loaded NOW calls") or alongside the company name.
+    """
+    if re.search(rf"(?<![A-Za-z0-9])\${re.escape(ticker)}(?![A-Za-z])", text, re.IGNORECASE):
+        return True
+    if not _is_ambiguous(ticker):
+        flags = re.IGNORECASE if len(ticker) >= 4 else 0
+        return bool(re.search(rf"(?<![A-Za-z])\$?{re.escape(ticker)}(?![A-Za-z])", text, flags))
+    tokens = re.findall(r"[A-Za-z0-9$.']+", text)
+    for i, tok in enumerate(tokens):
+        if tok != ticker.upper():
+            continue
+        near = {t.lower().strip(".'") for t in tokens[max(0, i - 3):i] + tokens[i + 1:i + 4]}
+        if near & FINANCE_WORDS:
+            return True
+        if name and _name_words(name, ticker) & {t.lower() for t in re.findall(r"[A-Za-z]+", text)}:
+            return True
+    return False
 
 
 def _created(item: dict) -> str | None:
@@ -52,14 +94,14 @@ def _url(item: dict) -> str | None:
 
 
 def search_ticker(
-    ticker: str, hours: int = 24, max_posts: int = 4, max_comments: int = 8
+    ticker: str, name: str = "", hours: int = 24, max_posts: int = 4, max_comments: int = 8
 ) -> dict[str, list[dict]]:
     """Top WSB posts and comments mentioning the ticker in the last `hours` (24 by default), by upvotes."""
     after = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
     posts = []
     for p in _get("posts/search", {"subreddit": "wallstreetbets", "query": ticker, "after": after, "limit": 100}):
         text = f"{p.get('title', '')}\n{p.get('selftext') or ''}"
-        if p.get("removed_by_category") or not mentions_ticker(text, ticker):
+        if p.get("removed_by_category") or not mentions_ticker(text, ticker, name):
             continue
         body = "" if (p.get("selftext") or "") in REMOVED else p.get("selftext") or ""
         posts.append({"id": p["id"], "title": p["title"], "body": body, "score": p.get("score", 0),
@@ -68,7 +110,7 @@ def search_ticker(
     comments = []
     for c in _get("comments/search", {"subreddit": "wallstreetbets", "body": ticker, "after": after, "limit": 100}):
         body = c.get("body") or ""
-        if body in REMOVED or len(body) < 20 or not mentions_ticker(body, ticker):
+        if body in REMOVED or len(body) < 20 or not mentions_ticker(body, ticker, name):
             continue
         comments.append({"id": c["id"], "body": body, "score": c.get("score", 0), "url": _url(c), "created": _created(c)})
     by_score = lambda x: x["score"]
