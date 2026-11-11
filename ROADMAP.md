@@ -3,7 +3,7 @@
 What is built is described in the [README](README.md). This file only holds what is still to do.
 
 ## Next
-- **Watch the first scheduled runs.** Unverified from GitHub's servers: Arctic Shift (it times out often, so Tavily is the backup), yfinance pre-market, the OpenAI call.
+- **Watch the first scheduled runs.** Unverified from GitHub's servers: Arctic Shift (it times out often, so Tavily is the backup), yfinance pre-market, the OpenAI call. Also check that the three parallel branches don't hit Jev or Tavily rate limits (both are called from more than one branch at once).
 - **Run time.** GitHub cron has been 5-9 hours late on this repo, so the brief may land after the open. Options: an outside scheduler that triggers the workflow on time, or a run on the Mac.
 - **Tune the system prompt** (`agent/prompts.py`) after reading a week of briefs: stance quality, length, how it handles thin evidence.
 - **Record the Jev model version** per run (`brief_picks` already keeps the LLM model, prompt hash and facts).

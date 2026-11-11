@@ -105,13 +105,15 @@ graph TD;
 1. **load_stored**: if today's report is already in Neon, reuse it (no new API calls) and go straight to `notify`.
 2. **fetch**: top 50 tickers from ApeWisdom (mentions and 24h change) and from Tradestie (comment counts and sentiment).
 3. **rank**: merge both lists into a top-10. A ticker picked by more sources ranks higher. Index funds and word-tickers like AI or YOU are skipped.
-4. **fetch_prices**: yfinance daily prices for all tickers, plus pre-market or after-hours price against the last regular close for the top 10, and SPY and QQQ for context.
-5. **fetch_earnings**: next earnings date per candidate (yfinance).
-6. **research**: today's headlines per candidate (Tavily).
-7. **classify_news**: Jev labels each headline's catalyst (earnings, analyst, deal, legal, macro, price-action).
-8. **reddit_evidence**: WSB posts and comments about each candidate. Arctic Shift (a free Reddit archive) first, Tavily limited to reddit.com as a backup. Tickers that are also everyday words (AI, ON, IT, NOW) only count when written as `$TICKER`, near a finance word ("NOW calls") or alongside the company name, so general chatter is not mistaken for the stock.
-9. **score_evidence**: Jev labels each post and comment, then rolls the labels up per ticker.
-10. **brief**: one LLM call writes an overview, up to 3 top picks and a stance, horizon and short take per ticker (`agent/prompts.py` holds the system prompt).
+Steps 4-9 run as three parallel branches (A: 4-5, B: 6-7, C: 8-9).
+
+4. **fetch_prices** (branch A): yfinance daily prices for all tickers, plus pre-market or after-hours price against the last regular close for the top 10, and SPY and QQQ for context.
+5. **fetch_earnings** (A): next earnings date per candidate (yfinance).
+6. **research** (branch B): today's headlines per candidate (Tavily).
+7. **classify_news** (B): Jev labels each headline's catalyst (earnings, analyst, deal, legal, macro, price-action).
+8. **reddit_evidence** (branch C): WSB posts and comments about each candidate. Arctic Shift (a free Reddit archive) first, Tavily limited to reddit.com as a backup. Tickers that are also everyday words (AI, ON, IT, NOW) only count when written as `$TICKER`, near a finance word ("NOW calls") or alongside the company name, so general chatter is not mistaken for the stock.
+9. **score_evidence** (C): Jev labels each post and comment, then rolls the labels up per ticker.
+10. **brief**: waits for all three branches, then one LLM call writes an overview, up to 3 top picks and a stance, horizon and short take per ticker (`agent/prompts.py` holds the system prompt).
 11. **summarize**: fills the report template.
 12. **render_pdf**: renders the report as a designed PDF (header, market strip, top picks, one card per ticker with a stance badge and a sentiment bar).
 13. **save**: writes the day's data and the LLM's per-ticker picks (`brief_picks`, flagged `degraded` if a stage failed) to Neon, and archives the PDF in the Neon bucket (`briefs/<date>.pdf`). The report text and PDF are stored only if no stage failed, so a rerun never reuses a report with gaps.
