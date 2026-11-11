@@ -43,6 +43,13 @@ flowchart LR
     G --> I
     H --> I
     H --> K[(PDF in Neon<br/>bucket)]
+
+    classDef src fill:#e8eefc,stroke:#4a6fa5,color:#111827
+    classDef step fill:#fef3c7,stroke:#b7791f,color:#111827
+    classDef store fill:#d1fae5,stroke:#2f7d5b,color:#111827
+    class A,B,C,D,E src
+    class F,G,H step
+    class I,J,K store
 ```
 Two attention lists pick the top 10 tickers. For those, the pipeline gathers prices, news and Reddit chatter, Jev labels the sentiment and the news catalysts, an LLM turns the facts into a stance per ticker, and the brief lands on Discord. Everything is saved to Postgres along the way.
 
@@ -88,9 +95,9 @@ graph TD;
 	score_evidence --> brief;
 	summarize --> render_pdf;
 	notify --> __end__;
-	classDef default fill:#f2f0ff,line-height:1.2
-	classDef first fill-opacity:0
-	classDef last fill:#bfb6fc
+	classDef default fill:#e8eefc,stroke:#4a6fa5,color:#111827,line-height:1.2
+	classDef first fill:#d1fae5,stroke:#2f7d5b,color:#111827
+	classDef last fill:#d1fae5,stroke:#2f7d5b,color:#111827
 ```
 
 1. **load_stored**: if today's report is already in Neon, reuse it (no new API calls) and go straight to `notify`.
