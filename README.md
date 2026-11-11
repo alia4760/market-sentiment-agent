@@ -105,6 +105,7 @@ graph TD;
 1. **load_stored**: if today's report is already in Neon, reuse it (no new API calls) and go straight to `notify`.
 2. **fetch**: top 50 tickers from ApeWisdom (mentions and 24h change) and from Tradestie (comment counts and sentiment).
 3. **rank**: merge both lists into a top-10. A ticker picked by more sources ranks higher. Index funds and word-tickers like AI or YOU are skipped.
+
 Steps 4-9 run as three parallel branches (A: 4-5, B: 6-7, C: 8-9).
 
 4. **fetch_prices** (branch A): yfinance daily prices for all tickers, plus pre-market or after-hours price against the last regular close for the top 10, and SPY and QQQ for context.
