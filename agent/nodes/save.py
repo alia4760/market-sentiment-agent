@@ -2,7 +2,8 @@ import logging
 
 from agent.errors import record_error
 from agent.state import State
-from db import save_evidence, save_news, save_newsletter, save_pdf, save_prices, save_tradestie, save_trending
+from agent.facts import build_facts
+from db import save_brief, save_evidence, save_news, save_newsletter, save_pdf, save_prices, save_tradestie, save_trending
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,9 @@ def save(state: State) -> dict:
         if state.get("evidence"):
             n = save_evidence(state["evidence"])
             log.info("Neon: saved %d rows to reddit_evidence", n)
+        if state.get("brief") and not state.get("collect_only"):
+            n = save_brief(state["brief"], build_facts(state), state.get("premarket") or {}, bool(state.get("errors")))
+            log.info("Neon: saved %d rows to brief_picks", n)
         # Only a complete report is stored, so a rerun never reuses one with gaps.
         if state.get("errors"):
             log.warning("Neon: report not stored because earlier stages had errors")

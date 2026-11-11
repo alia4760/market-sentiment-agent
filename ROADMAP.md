@@ -6,7 +6,7 @@ What is built is described in the [README](README.md). This file only holds what
 - **Watch the first scheduled runs.** Unverified from GitHub's servers: Arctic Shift (it times out often, so Tavily is the backup), yfinance pre-market, the OpenAI call.
 - **Run time.** GitHub cron has been 5-9 hours late on this repo, so the brief may land after the open. Options: an outside scheduler that triggers the workflow on time, or a run on the Mac.
 - **Tune the system prompt** (`agent/prompts.py`) after reading a week of briefs: stance quality, length, how it handles thin evidence.
-- **Store the facts and the brief** per day (the facts record and the LLM output) so a brief can be recreated or compared later. Also record the Jev model and prompt version.
+- **Record the Jev model version** per run (`brief_picks` already keeps the LLM model, prompt hash and facts).
 - **Jev on comments.** The sentiment question says "post"; comments are scored with the same wording.
 - **Flag degraded runs.** Fallbacks (Arctic Shift failed, PDF sent as text) only reach the log. Mention them in the report, and alert when no report was posted by a given time (GitHub sometimes drops scheduled runs).
 - **Pin GitHub Actions with Dependabot** so the pinned commits get updated.
@@ -16,13 +16,13 @@ Three layers, each answering a different question.
 
 1. **Ticker matching: does it find the right posts?** A small labeled set of real Reddit snippets, each marked "about this ticker or not". Score precision and recall on every change to `mentions_ticker`. Start from the cases in `tests/test_ticker_matching.py` and add real misses.
 2. **Jev: is the label right?** Baseline done in `evals/` (60 finance tweets and headlines, about 83% accurate; labels under 0.5 confidence are right less than half the time). Next: hand-label 30-50 real WSB posts and rerun. Also compare Jev with a local model and a small LLM.
-3. **Picks: are they any good?** Each day, store every pick (ticker, direction, horizon, price at report time). Later, record the price move and score each pick against its own stated horizon (day trade, swing).
+3. **Picks: are they any good?** Each day's picks are stored in `brief_picks`. Later, record the price move and score each pick against its own stated horizon (day trade, swing).
    - Hit rate: share of longs that went up and shorts that went down.
    - Average return against SPY over the same window, so market-wide moves don't count as wins.
    - Results split by evidence level: do picks with more posts do better than thin ones?
    - Baseline: does sentiment add anything beyond raw mention volume? Research on WSB suggests volume often does as well or better.
    - Under about 100 picks the result is mostly noise, so this needs weeks of data. Judge all picks, not only the ones that worked.
-   - Storage: a `picks` table in Neon plus a scoring script; results as CSV in `evals/` or a small chart.
+   - Storage: picks are already saved daily in `brief_picks` (stance, horizon, top-pick rank, price at report time). Still to build: a scoring script that adds the later price moves; results as CSV in `evals/` or a small chart.
 
 ## Track record
 - Compare the price at report time with 1 week, 1 month and 3 months later, against SPY.

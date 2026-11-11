@@ -149,6 +149,7 @@ Postgres tables in Neon, created on first use (`db/`). A rerun on the same day r
 - `daily_prices`: daily close and volume.
 - `ticker_news`: headlines per candidate, with Jev's catalyst label.
 - `reddit_evidence`: every Reddit post and comment used, with its text, votes, URL, source, Jev label and confidence.
+- `brief_picks`: one row per ticker per day: the LLM's stance, horizon and take, whether it was a top pick (rank, direction, reason), the price at report time, the facts the LLM was given (jsonb), the model and a prompt hash, and a `degraded` flag. Saved even when a stage failed, so every day's picks can be queried.
 - `newsletters`: the finished report per day, with `sent_at` so it is only sent once, and `pdf_key` pointing to the PDF in the bucket.
 - `post_scores`: the old generic top-10 posts (no longer written).
 

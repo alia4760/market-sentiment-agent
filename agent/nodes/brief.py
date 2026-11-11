@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -71,6 +72,9 @@ def brief(state: State) -> dict:
         )
         if result["parsed"] is None:
             raise RuntimeError(f"LLM output did not match the brief format: {result['parsing_error']}")
-        return {"brief": result["parsed"].model_dump()}
+        out = result["parsed"].model_dump()
+        out["model"] = model
+        out["prompt_hash"] = hashlib.sha1(SYSTEM_PROMPT.encode()).hexdigest()[:10]
+        return {"brief": out}
     except Exception as e:
         return {"errors": [record_error("llm", e)]}

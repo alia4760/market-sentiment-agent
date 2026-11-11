@@ -86,6 +86,26 @@ TABLES = [
     )
     """,
     "alter table newsletters add column if not exists pdf_key text",
+    """
+    create table if not exists brief_picks (
+        run_date date not null,
+        ticker text not null,
+        stance text,
+        horizon text,
+        summary text,
+        top_pick_rank int,
+        top_pick_direction text,
+        top_pick_reason text,
+        ref_price double precision,
+        ref_session text,
+        prev_close double precision,
+        model text,
+        prompt_hash text,
+        degraded boolean,
+        facts jsonb,
+        primary key (run_date, ticker)
+    )
+    """,
 ]
 
 
