@@ -100,7 +100,7 @@ graph TD;
 5. **fetch_earnings**: next earnings date per candidate (yfinance).
 6. **research**: today's headlines per candidate (Tavily).
 7. **classify_news**: Jev labels each headline's catalyst (earnings, analyst, deal, legal, macro, price-action).
-8. **reddit_evidence**: WSB posts and comments about each candidate. Arctic Shift (a free Reddit archive) first, Tavily limited to reddit.com as a backup.
+8. **reddit_evidence**: WSB posts and comments about each candidate. Arctic Shift (a free Reddit archive) first, Tavily limited to reddit.com as a backup. Tickers that are also everyday words (AI, ON, IT, NOW) only count when written as `$TICKER`, near a finance word ("NOW calls") or alongside the company name, so general chatter is not mistaken for the stock.
 9. **score_evidence**: Jev labels each post and comment, then rolls the labels up per ticker.
 10. **brief**: one LLM call writes an overview, up to 3 top picks and a stance, horizon and short take per ticker (`agent/prompts.py` holds the system prompt).
 11. **summarize**: fills the report template.
@@ -166,12 +166,14 @@ agent/             the LangGraph pipeline
   report.py        report text to the short Discord message and the PDF
   jev.py           the Jev classifier (sentiment and catalyst questions)
   nodes/           one file per node
-  diagram.py       prints the Mermaid diagram above
+  diagram.py       prints the Mermaid diagram above and saves it to docs/pipeline.mmd
 db/                Neon storage, one file per table group
+docs/              pipeline.mmd, the generated graph diagram
+tests/             unit tests (uv run --with pytest pytest tests)
 evals/             baseline eval of Jev
 neon_database/     Neon project config
 ```
-After changing the graph, regenerate the diagram with `uv run python -m agent.diagram` and paste it into the block above.
+After changing the graph, regenerate the diagram with `uv run python -m agent.diagram`. It prints the Mermaid source, saves it to `docs/pipeline.mmd` (the always-current copy) and you paste it into the block above.
 
 ## Known limits
 - **Reddit coverage is patchy.** Arctic Shift often times out, so several tickers fall back to Tavily (snippets only, no votes). The report marks those as thin.

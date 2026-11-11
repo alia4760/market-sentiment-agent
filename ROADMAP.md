@@ -1,54 +1,45 @@
-# Approach and roadmap
+# Roadmap
 
-## Goal
-Find which stocks are hot, and whether the conversation is bullish or bearish. Then check whether the claims behind it hold up.
-
-## Approach
-Three jobs, each with its own source:
-
-1. **Attention: is it being talked about?** Pull the top 50 tickers from ApeWisdom (mentions and mentions 24h ago come with each one). Pick candidates two ways: the top 10 by mentions, and the top 10 by day-over-day change (ratio, with a minimum mention count so tiny jumps don't win). Take the union, up to 20 tickers. Exclude broad-market funds like SPY, QQQ and IWM, and watch for word-tickers like API and AGI. Only these candidates go on to Jev.
-2. **Direction: bullish or bearish?** Jev scores the posts about each hot ticker. Roll up per ticker (share bullish vs bearish, average confidence).
-3. **Confirmation: is something actually happening?** yfinance price and volume.
-
-Top posts by upvotes skew toward gain screenshots and memes, so posts are evidence for a ticker, not the main output.
-
-## Track record
-Save each day's results so we can check them later.
-- Daily snapshot per ticker: date, mentions and change, bullish/bearish share, number of posts, price on the day.
-- Later, compare the price then vs now at 1 week, 1 month and 3 months, against SPY so market-wide moves don't look like wins.
-- Chart how each call played out, e.g. a static page built from the saved data.
-- Storage: Neon Postgres, plain SQL. Tables: `trending_snapshots`, `tradestie_snapshots`, `daily_prices`, `ticker_news`, `post_scores`, `newsletters`.
-- Start saving from day one. Reddit sentiment can't be backfilled, and a 3-month check needs 3 months of data.
-
-## Eval
-- Does sentiment add anything beyond mention volume? Research on WSB suggests volume often does as well or better, so mention volume is the baseline.
-- Compare Jev against a local model and a small LLM.
-- Is Jev's confidence calibrated? Baseline done in `evals/` (60 finance tweets/headlines, about 83% accurate; labels under 0.5 confidence are right less than half the time). Next: hand-label 30-50 real WSB posts and rerun.
-
-## Built
-Daily pipeline (see the README for the graph): ApeWisdom + Tradestie ranking, pre-market prices, earnings dates, Tavily news with Jev catalyst labels, Reddit posts and comments per ticker (Arctic Shift, Tavily backup) scored by Jev, an LLM brief with a stance per ticker, a Discord report and failure alerts, all saved to Neon. Runs daily on GitHub Actions.
+What is built is described in the [README](README.md). This file only holds what is still to do.
 
 ## Next
-- **Watch the first scheduled runs.** Unverified from GitHub's servers: Arctic Shift (it times out often, so Tavily is the backup), yfinance pre-market, the OpenAI call. Add the `OPENAI_API_KEY`, `TAVILY_API_KEY` and `DISCORD_WEBHOOK_URL` repo secrets first.
+- **Watch the first scheduled runs.** Unverified from GitHub's servers: Arctic Shift (it times out often, so Tavily is the backup), yfinance pre-market, the OpenAI call.
 - **Run time.** GitHub cron has been 5-9 hours late on this repo, so the brief may land after the open. Options: an outside scheduler that triggers the workflow on time, or a run on the Mac.
 - **Tune the system prompt** (`agent/prompts.py`) after reading a week of briefs: stance quality, length, how it handles thin evidence.
 - **Store the facts and the brief** per day (the facts record and the LLM output) so a brief can be recreated or compared later. Also record the Jev model and prompt version.
-- **Check the Jev sentiment question on comments.** It says "post"; comments are scored with the same wording.
-- **Cost watch.** Each run uses about 100 Jev calls, 10-20 Tavily credits and one LLM call (about 4k tokens in, 3k out).
+- **Jev on comments.** The sentiment question says "post"; comments are scored with the same wording.
+- **Flag degraded runs.** Fallbacks (Arctic Shift failed, PDF sent as text) only reach the log. Mention them in the report, and alert when no report was posted by a given time (GitHub sometimes drops scheduled runs).
+- **Pin GitHub Actions with Dependabot** so the pinned commits get updated.
+
+## Evaluation
+Three layers, each answering a different question.
+
+1. **Ticker matching: does it find the right posts?** A small labeled set of real Reddit snippets, each marked "about this ticker or not". Score precision and recall on every change to `mentions_ticker`. Start from the cases in `tests/test_ticker_matching.py` and add real misses.
+2. **Jev: is the label right?** Baseline done in `evals/` (60 finance tweets and headlines, about 83% accurate; labels under 0.5 confidence are right less than half the time). Next: hand-label 30-50 real WSB posts and rerun. Also compare Jev with a local model and a small LLM.
+3. **Picks: are they any good?** Each day, store every pick (ticker, direction, horizon, price at report time). Later, record the price move and score each pick against its own stated horizon (day trade, swing).
+   - Hit rate: share of longs that went up and shorts that went down.
+   - Average return against SPY over the same window, so market-wide moves don't count as wins.
+   - Results split by evidence level: do picks with more posts do better than thin ones?
+   - Baseline: does sentiment add anything beyond raw mention volume? Research on WSB suggests volume often does as well or better.
+   - Under about 100 picks the result is mostly noise, so this needs weeks of data. Judge all picks, not only the ones that worked.
+   - Storage: a `picks` table in Neon plus a scoring script; results as CSV in `evals/` or a small chart.
+
+## Track record
+- Compare the price at report time with 1 week, 1 month and 3 months later, against SPY.
+- Chart how each call played out, e.g. a static page built from the saved data.
+- Reddit sentiment can't be backfilled, and a 3-month check needs 3 months of data.
 
 ## Ideas
 - More subreddits through ApeWisdom (r/stocks, r/investing, r/options).
 - StockTwits: trending list plus its self-tagged bull/bear labels as a cross-check.
 - Google Trends or Wikipedia pageviews as a cheap attention baseline.
-- News per ticker (Tavily), to explain why it's hot. Run it only for the few hottest tickers each day, to stay inside the free tier.
-- LangSmith tracing for the graph runs (free Developer plan: 5,000 traces a month, 14-day retention, so screenshot anything worth keeping). Add after the daily run is working.
-- Biggest market movers from yfinance, as a label (hot and already moving vs hot but not yet) and to test whether Reddit leads or lags price. Save the daily movers list too.
-- Maybe, low priority: save eval runs. Either LangSmith (its experiments feature may fit eval runs better than Postgres) or a small Postgres table. The CSVs in git are enough for now.
+- LangSmith tracing for the graph runs (free Developer plan: 5,000 traces a month, 14-day retention).
+- Biggest market movers from yfinance, as a label (hot and already moving vs hot but not yet) and to test whether Reddit leads or lags price.
+- Save eval runs, either in LangSmith experiments or a small Postgres table. The CSVs in git are enough for now.
 - Dashboard of prediction accuracy over time, and alerts when a ticker crosses a threshold.
+- Cost watch: each run uses about 100 Jev calls, 10-20 Tavily credits and one LLM call.
 
 ## Later
-- Backtest: does attention or sentiment lead price? Needs more days of data than the 3 weeks we have.
+- Backtest: does attention or sentiment lead price? Needs more days of data than we have.
 - Jev versus Tradestie: which one lines up better with later price moves. Decides whether Jev's sentiment step earns its place.
-
-## Later: earnings calls
-Use earnings-call transcripts as a validity check. If Reddit says a ticker is bullish, did management's tone and guidance on the last call support it, and did the stock follow? Research suggests transcript tone carries some return signal, but it is modest and fades quickly. Free transcript APIs vary, so check coverage and limits first. Treat this as a research question; a weak result is still worth writing up.
+- **Earnings calls as a validity check.** If Reddit says a ticker is bullish, did management's tone and guidance on the last call support it, and did the stock follow? Transcript tone carries a modest return signal that fades quickly. Free transcript APIs vary, so check coverage and limits first. A weak result is still worth writing up.

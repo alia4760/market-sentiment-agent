@@ -1,0 +1,41 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	load_stored(load_stored)
+	fetch(fetch)
+	rank(rank)
+	fetch_prices(fetch_prices)
+	fetch_earnings(fetch_earnings)
+	research(research)
+	classify_news(classify_news)
+	reddit_evidence(reddit_evidence)
+	score_evidence(score_evidence)
+	brief(brief)
+	summarize(summarize)
+	render_pdf(render_pdf)
+	save(save)
+	notify(notify)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> load_stored;
+	brief --> summarize;
+	classify_news --> reddit_evidence;
+	fetch --> rank;
+	fetch_earnings --> research;
+	fetch_prices --> fetch_earnings;
+	load_stored -.-> fetch;
+	load_stored -.-> notify;
+	rank --> fetch_prices;
+	reddit_evidence --> score_evidence;
+	render_pdf --> save;
+	research --> classify_news;
+	save --> notify;
+	score_evidence --> brief;
+	summarize --> render_pdf;
+	notify --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
