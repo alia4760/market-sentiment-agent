@@ -59,6 +59,25 @@ TABLES = [
     )
     """,
     """
+    create table if not exists reddit_evidence (
+        run_date date not null,
+        ticker text not null,
+        kind text not null,
+        item_id text not null,
+        source text,
+        title text,
+        body text,
+        score int,
+        num_comments int,
+        url text,
+        label text,
+        confidence double precision,
+        primary key (run_date, ticker, kind, item_id)
+    )
+    """,
+    "alter table ticker_news add column if not exists catalyst text",
+    "alter table reddit_evidence add column if not exists created_at timestamptz",
+    """
     create table if not exists newsletters (
         run_date date primary key,
         text text not null,
@@ -66,6 +85,7 @@ TABLES = [
         sent_at timestamptz
     )
     """,
+    "alter table newsletters add column if not exists pdf_key text",
 ]
 
 

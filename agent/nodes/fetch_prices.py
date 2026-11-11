@@ -23,6 +23,7 @@ def fetch_prices(state: State) -> dict:
         update["errors"].append(record_error("prices", e))
     shortlist = [c["ticker"] for c in state.get("trending") or []]
     if shortlist:
+        shortlist += ["SPY", "QQQ"]  # market context for the report
         try:
             log.info("yfinance: requesting extended-hours prices for %d candidates", len(shortlist))
             update["premarket"] = get_premarket(shortlist)

@@ -1,47 +1,189 @@
 # market-sentiment-agent
-LangGraph agent that finds which stocks are being talked about on Reddit and whether the talk is bullish or bearish.
+
+A LangGraph agent that builds a daily pre-market brief for r/wallstreetbets stocks: which tickers are suddenly being talked about, whether the talk is bullish or bearish, what the news and the price say about it, and an opinionated take on what is worth trading today.
+
+## Goals
+- **Find what is hot.** Rank tickers by how fast WSB attention is rising (ApeWisdom mentions, Tradestie comments), not by raw volume alone.
+- **Read the direction.** Score the WSB posts and comments about each hot ticker as bullish, bearish or neutral with the Jev decision model.
+- **Check it against reality.** Compare the buzz with the price (prior day and pre-market), upcoming earnings and today's headlines, and say when they disagree.
+- **Give a usable brief.** An LLM turns the facts into a stance and a short take per ticker, plus the few tickers most worth a look, and the report is posted to Discord before the US open.
+- **Build a track record.** Everything is saved to Postgres every day, so later we can test whether the signal predicts anything. See [ROADMAP.md](ROADMAP.md).
+
+This is a portfolio project, not a trading system. The Reddit signal is weak on its own and the history is short.
+
+## The big picture
+```mermaid
+flowchart LR
+    subgraph Sources
+        A[ApeWisdom<br/>mentions]
+        B[Tradestie<br/>comments + sentiment]
+        C[yfinance<br/>prices, pre-market, earnings]
+        D[Tavily<br/>news headlines]
+        E[Reddit<br/>posts + comments]
+    end
+
+    F[Rank<br/>top 10 tickers]
+    G[Jev<br/>bullish / bearish,<br/>news catalyst]
+    H[LLM<br/>stance + short take]
+    I[(Neon<br/>Postgres)]
+    J[Daily brief<br/>short message + PDF<br/>on Discord]
+
+    A --> F
+    B --> F
+    F --> C
+    F --> D
+    F --> E
+    D --> G
+    E --> G
+    C --> H
+    G --> H
+    H --> J
+    F --> I
+    C --> I
+    G --> I
+    H --> I
+    H --> K[(PDF in Neon<br/>bucket)]
+```
+Two attention lists pick the top 10 tickers. For those, the pipeline gathers prices, news and Reddit chatter, Jev labels the sentiment and the news catalysts, an LLM turns the facts into a stance per ticker, and the brief lands on Discord. Everything is saved to Postgres along the way.
 
 ## How it works
-A LangGraph pipeline: `load_stored` checks Neon for today's newsletter and stops there if it exists. Otherwise `fetch` pulls the day's top r/wallstreetbets posts (RSS, with post body) and the trending-ticker list (ApeWisdom), `score` classifies each post as bullish, bearish or neutral with the Jev decision model (`agent/jev.py`), `summarize` renders a plain-text newsletter, and `save` writes the trending tickers, post scores and newsletter to Neon.
+The pipeline is a fixed LangGraph graph, one file per node in `agent/nodes/`. Facts and numbers come straight from data and fill a fixed template. Jev answers narrow classification questions, and one LLM call writes the opinions from those facts, so it cannot invent numbers.
 
-The goal is ticker-first: rank tickers by how much their mentions are rising, then use post sentiment as supporting evidence. See [ROADMAP.md](ROADMAP.md) for the approach and what's next, and [evals/](evals/README.md) for the Jev baseline eval.
+```mermaid
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	load_stored(load_stored)
+	fetch(fetch)
+	rank(rank)
+	fetch_prices(fetch_prices)
+	fetch_earnings(fetch_earnings)
+	research(research)
+	classify_news(classify_news)
+	reddit_evidence(reddit_evidence)
+	score_evidence(score_evidence)
+	brief(brief)
+	summarize(summarize)
+	render_pdf(render_pdf)
+	save(save)
+	notify(notify)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> load_stored;
+	brief --> summarize;
+	classify_news --> reddit_evidence;
+	fetch --> rank;
+	fetch_earnings --> research;
+	fetch_prices --> fetch_earnings;
+	load_stored -.-> fetch;
+	load_stored -.-> notify;
+	rank --> fetch_prices;
+	reddit_evidence --> score_evidence;
+	render_pdf --> save;
+	research --> classify_news;
+	save --> notify;
+	score_evidence --> brief;
+	summarize --> render_pdf;
+	notify --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
+```
 
-## Layout
-```
-main.py            entry point (--refresh, --collect-only)
-sources/           one file per outside data source: reddit, apewisdom, tradestie, prices, earnings, news
-agent/             the LangGraph pipeline
-  state.py         the shared State and the exit codes
-  graph.py         wires the nodes together
-  jev.py           the Jev sentiment classifier
-  nodes/           one file per node: load_stored, fetch, rank, fetch_prices, fetch_earnings, research, score, summarize, save
-db/                Neon storage, one file per table group
-evals/             baseline eval of Jev
-backfill.py        one-off history backfill (Tradestie and prices)
-```
+1. **load_stored**: if today's report is already in Neon, reuse it (no new API calls) and go straight to `notify`.
+2. **fetch**: top 50 tickers from ApeWisdom (mentions and 24h change) and from Tradestie (comment counts and sentiment).
+3. **rank**: merge both lists into a top-10. A ticker picked by more sources ranks higher. Index funds and word-tickers like AI or YOU are skipped.
+4. **fetch_prices**: yfinance daily prices for all tickers, plus pre-market or after-hours price against the last regular close for the top 10, and SPY and QQQ for context.
+5. **fetch_earnings**: next earnings date per candidate (yfinance).
+6. **research**: today's headlines per candidate (Tavily).
+7. **classify_news**: Jev labels each headline's catalyst (earnings, analyst, deal, legal, macro, price-action).
+8. **reddit_evidence**: WSB posts and comments about each candidate. Arctic Shift (a free Reddit archive) first, Tavily limited to reddit.com as a backup.
+9. **score_evidence**: Jev labels each post and comment, then rolls the labels up per ticker.
+10. **brief**: one LLM call writes an overview, up to 3 top picks and a stance, horizon and short take per ticker (`agent/prompts.py` holds the system prompt).
+11. **summarize**: fills the report template.
+12. **render_pdf**: renders the report as a designed PDF (header, market strip, top picks, one card per ticker with a stance badge and a sentiment bar).
+13. **save**: writes everything to Neon and archives the PDF in the Neon bucket (`briefs/<date>.pdf`). The report is stored only if no stage failed, so a rerun never reuses a report with gaps.
+14. **notify**: posts a short message (overview and top picks) with the PDF attached to Discord, once per day. On a rerun it posts the archived PDF from the bucket.
+
+A stage that fails is recorded and the rest keep going; the report still prints. At the end the run exits non-zero, so a scheduled job turns red and posts an alert to Discord.
+
+| Exit code | Stage |
+|---|---|
+| 2 | Reddit evidence |
+| 3 | ApeWisdom |
+| 4 | Jev |
+| 5 | Database |
+| 6 | Tradestie |
+| 7 | Daily prices |
+| 8 | Pre-market prices |
+| 9 | Earnings dates |
+| 10 | Tavily news |
+| 11 | LLM brief |
+| 12 | Discord |
+| 13 | PDF rendering |
 
 ## Run it
 Copy `.env.template.md` to `.env` and fill in your keys, then:
 
 ```
-uv run main.py             # reuses today's stored newsletter if there is one
-uv run main.py --refresh   # rebuild it
-uv run main.py --collect-only   # save data only, no Jev calls
+uv run main.py                  # reuses today's stored report if there is one
+uv run main.py --refresh        # rebuild it
+uv run main.py --collect-only   # save data only: no Jev, no LLM, no report, no Discord
+uv run main.py --resend         # post to Discord even if today's report was already sent
 ```
 
-A stage that fails is recorded and the newsletter still prints, but the run exits non-zero so a scheduled job shows as failed: 2 = Reddit, 3 = ApeWisdom, 4 = Jev, 5 = database, 6 = Tradestie, 7 = prices, 8 = pre-market, 9 = earnings, 10 = Tavily. Only a clean run stores the newsletter.
+A rerun without `--refresh` makes no API calls: it reuses the stored report and, if it has not been sent today, posts the archived PDF from the bucket. Add `--resend` to post it again.
+
+Keys: `JEV_API_KEY`, `TAVILY_API_KEY`, `OPENAI_API_KEY`, `DATABASE_URL`, `DISCORD_WEBHOOK_URL`, the four bucket variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION`, from `neon env pull`), and `BRIEF_MODEL` / `BRIEF_EFFORT` to choose the LLM (leave `BRIEF_MODEL` unset to skip the LLM and get a template-only report).
 
 ## Scheduled run
-`.github/workflows/daily.yml` runs `main.py` every day at 13:47 UTC (8:47am ET in winter; switch to 12:47 UTC when US summer time starts in March). It needs three repo secrets: `DATABASE_URL`, `JEV_API_KEY` and `TAVILY_API_KEY`. (`--collect-only` is available if you ever want a run with no Jev calls.) A failed stage makes the job fail, so GitHub emails you.
+`.github/workflows/daily.yml` runs `main.py` every day at 13:47 UTC (8:47am ET in winter; change to 12:47 UTC when US summer time starts in March, or it lands after the open). The schedule is off the hour because GitHub delays or drops runs at :00. It needs these repo secrets: `DATABASE_URL`, `JEV_API_KEY`, `TAVILY_API_KEY`, `OPENAI_API_KEY`, `DISCORD_WEBHOOK_URL` and the four bucket variables above (without them the PDF is still sent, just not archived). If the job fails, a final step posts the failing stages to Discord. Add secrets under Settings > Secrets and variables > Actions, or with `gh secret set NAME`. You can also start a run by hand from the Actions tab.
 
 ## What it stores
 Postgres tables in Neon, created on first use (`db/`). A rerun on the same day replaces that day's rows.
-- `trending_snapshots`: the day's top 50 tickers with mentions, mentions 24h ago, rank, and which were picked as candidates.
-- `post_scores`: each top post with its body, Jev label and confidence.
-- `newsletters`: the finished newsletter per day, with a `sent_at` column for a future email step.
+- `trending_snapshots`: the day's top 50 ApeWisdom tickers, and which were picked as candidates.
+- `tradestie_snapshots`: Tradestie's top 50 with sentiment and comment counts.
+- `daily_prices`: daily close and volume.
+- `ticker_news`: headlines per candidate, with Jev's catalyst label.
+- `reddit_evidence`: every Reddit post and comment used, with its text, votes, URL, source, Jev label and confidence.
+- `newsletters`: the finished report per day, with `sent_at` so it is only sent once, and `pdf_key` pointing to the PDF in the bucket.
+- `post_scores`: the old generic top-10 posts (no longer written).
 
-## Status
-Tickers and posts are not linked yet: the newsletter lists trending tickers and post sentiment separately. Per-ticker sentiment is the next step; no LLM writes the newsletter, it is a template.
+The Neon object-storage bucket (`assets`, private) holds each day's PDF at `briefs/<date>.pdf`.
+
+## Layout
+```
+main.py            entry point
+sources/           one file per outside data source: apewisdom, tradestie, prices, earnings, news, reddit_search, discord
+agent/             the LangGraph pipeline
+  state.py         the shared State and the exit codes
+  graph.py         wires the nodes together
+  facts.py         turns the state into one facts record per ticker
+  prompts.py       the LLM system prompt
+  report.py        report text to the short Discord message and the PDF
+  jev.py           the Jev classifier (sentiment and catalyst questions)
+  nodes/           one file per node
+  diagram.py       prints the Mermaid diagram above
+db/                Neon storage, one file per table group
+evals/             baseline eval of Jev
+neon_database/     Neon project config
+```
+After changing the graph, regenerate the diagram with `uv run python -m agent.diagram` and paste it into the block above.
+
+## Known limits
+- **Reddit coverage is patchy.** Arctic Shift often times out, so several tickers fall back to Tavily (snippets only, no votes). The report marks those as thin.
+- **Scheduled runs can start late.** GitHub cron on this repo has run hours behind schedule, so the brief may land after the US open.
+- **Pre-market prices are thin.** Extended-hours moves come from low volume, so treat them as hints.
+- **Short history.** The signal is untested; the track record is still being collected. The brief is opinionated but automated, so verify before trading.
+
+## Cost per run
+About 100 Jev calls, 10-20 Tavily credits and one LLM call (about 4,200 tokens in and 2,600 out on `gpt-6-luna`, well under a cent). The PDF is about 13 KB.
+
+## Evals
+`evals/` holds a baseline check of Jev on 60 labeled finance tweets and headlines (about 83% accurate; labels under 0.5 confidence are right less than half the time). See [evals/README.md](evals/README.md).
 
 ## Neon (database and storage)
 The Neon config lives in `neon_database/` (`neon.ts` declares the services). Run Neon CLI commands from inside that folder. To refresh the Neon variables in the root `.env`:

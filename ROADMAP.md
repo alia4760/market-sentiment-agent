@@ -25,40 +25,16 @@ Save each day's results so we can check them later.
 - Compare Jev against a local model and a small LLM.
 - Is Jev's confidence calibrated? Baseline done in `evals/` (60 finance tweets/headlines, about 83% accurate; labels under 0.5 confidence are right less than half the time). Next: hand-label 30-50 real WSB posts and rerun.
 
+## Built
+Daily pipeline (see the README for the graph): ApeWisdom + Tradestie ranking, pre-market prices, earnings dates, Tavily news with Jev catalyst labels, Reddit posts and comments per ticker (Arctic Shift, Tavily backup) scored by Jev, an LLM brief with a stance per ticker, a Discord report and failure alerts, all saved to Neon. Runs daily on GitHub Actions.
+
 ## Next
-Goal: a fixed daily report, sent before the US open, that says what to look at today and why.
-
-**Decisions made**
-- **Run time:** 13:47 UTC every day (8:47am ET in winter; change to 12:47 UTC when US summer time starts in March, or it lands after the open; off the hour because GitHub delays or drops runs at :00): pre-market, before the 9:30 open. GitHub cron ignores daylight saving and can start late, so this leaves a buffer. Weekends run too, to keep weekend chatter. Could add a second run just after the open later.
-- **Pre-market prices:** yfinance returns extended-hours bars (4:00am-8:00pm ET) with `prepost=True`. Tested: MU closed near $795 and traded near $776 after hours. Pre-market is thin, so treat it as a hint.
-- **Roles:** facts and numbers come straight from data and fill a fixed template. Jev answers bounded questions (post sentiment, post type, headline catalyst, per-ticker bullish/bearish/mixed). One LLM call writes the short prose and is told to use only the facts it is given, so it cannot invent numbers.
-- **Funnel:** wide scan of about 50 tickers with the cheap sources (ApeWisdom, Tradestie, yfinance, all batched), cut to the top 10, then spend the limited calls (Tavily, Reddit) on those only.
-- **Backtest and Jev vs Tradestie wait** until there is more data (see Later).
-
-**Build order**
-1. Daily GitHub Action (written; needs repo secrets, a push, and a first manual run to check Reddit and yfinance work from GitHub's servers).
-2. Word-ticker filter (done, `WORD_TICKERS` in `apewisdom.py`).
-3. Pre-market price and an open-price column in `daily_prices`: prior close to latest pre-market price per ticker.
-4. Earnings dates: `yfinance Ticker.calendar` gives the next date. Flag tickers reporting within a week (APP reported Nov 4, which likely explains its jump).
-5. Ticker extraction: link each post to tickers it mentions (`$MU` cashtags, or uppercase words on the day's ticker list, after the word filter), then aggregate Jev labels per ticker.
-6. Post-type question added to the same Jev call (analysis, news, position, meme, question); keep the useful ones. Score it on a small hand-labelled WSB sample first.
-7. Tavily news for the top few tickers (test 3-4 tickers first, including whether it returns Reddit snippets), with Jev labelling each headline by catalyst: earnings, analyst, legal, product, macro.
-8. Per-ticker evidence packet (attention, price, pre-market, earnings, news, post sentiment) scored by Jev as bullish, bearish or mixed with a confidence.
-9. One LLM call for a short "what is going on" per top ticker plus a market overview (SPY, QQQ pre-market). Save it in `newsletters`.
-10. Ticker label: news-driven, chatter ahead of price, or already moved.
-11. Email the report; `sent_at` in `newsletters` stops double sends.
-
-**Report template (per ticker)**
-```
-MU - news-driven | mentions 108 (was 59) | Tradestie bearish -0.03
-Price: yesterday -7.0%, pre-market -2.4% | Earnings: Dec 23
-Jev: bearish (0.71) | Why: <2 sentences>
-```
-
-**Known gaps**
-- Only 10 posts a day, so most tickers will have 0-1 posts. Searching Reddit per ticker (or Arctic Shift) would help, but Reddit rate-limits and may block GitHub's IPs. Test first.
-- Word filter loses a few real tickers (ON, DTE, IT). Edit the list if needed.
-- Secrets needed by the Action: `DATABASE_URL`, `JEV_API_KEY`. Add `TAVILY_API_KEY` and an LLM key when those steps are built.
+- **Watch the first scheduled runs.** Unverified from GitHub's servers: Arctic Shift (it times out often, so Tavily is the backup), yfinance pre-market, the OpenAI call. Add the `OPENAI_API_KEY`, `TAVILY_API_KEY` and `DISCORD_WEBHOOK_URL` repo secrets first.
+- **Run time.** GitHub cron has been 5-9 hours late on this repo, so the brief may land after the open. Options: an outside scheduler that triggers the workflow on time, or a run on the Mac.
+- **Tune the system prompt** (`agent/prompts.py`) after reading a week of briefs: stance quality, length, how it handles thin evidence.
+- **Store the facts and the brief** per day (the facts record and the LLM output) so a brief can be recreated or compared later. Also record the Jev model and prompt version.
+- **Check the Jev sentiment question on comments.** It says "post"; comments are scored with the same wording.
+- **Cost watch.** Each run uses about 100 Jev calls, 10-20 Tavily credits and one LLM call (about 4k tokens in, 3k out).
 
 ## Ideas
 - More subreddits through ApeWisdom (r/stocks, r/investing, r/options).

@@ -5,6 +5,9 @@ on:
     - cron: "47 13 * * *"   # 13:47 UTC = 8:47am ET in winter. In summer time (from March) this becomes 9:47am ET, after the open: change to 47 12. Off the hour because GitHub delays or drops runs at :00
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -18,3 +21,22 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JEV_API_KEY: ${{ secrets.JEV_API_KEY }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL_S3: ${{ secrets.AWS_ENDPOINT_URL_S3 }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          BRIEF_MODEL: openai:gpt-6-luna
+          BRIEF_EFFORT: medium
+      - name: Alert Discord on failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -z "$DISCORD_WEBHOOK_URL" ] && exit 0
+          DETAIL=$( [ -f run_errors.txt ] && head -c 1500 run_errors.txt || echo "(no stage errors recorded; see the log)" )
+          jq -n --arg c "Daily run failed
+          $DETAIL
+          $RUN_URL" '{content: $c}' | curl -sS -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"

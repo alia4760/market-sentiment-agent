@@ -5,7 +5,7 @@ from db.schema import ensure_tables
 def save_news(news: dict[str, list[dict]]) -> int:
     """Replace today's saved headlines."""
     values = [
-        (today(), ticker, a["url"], a["title"], a["content"], a["published"])
+        (today(), ticker, a["url"], a["title"], a["content"], a["published"], a.get("catalyst"))
         for ticker, articles in news.items()
         for a in articles
     ]
@@ -14,7 +14,7 @@ def save_news(news: dict[str, list[dict]]) -> int:
         conn.execute("delete from ticker_news where run_date = %s", (today(),))
         with conn.cursor() as cur:
             cur.executemany(
-                "insert into ticker_news values (%s, %s, %s, %s, %s, %s) on conflict do nothing",
+                "insert into ticker_news (run_date, ticker, url, title, content, published, catalyst) values (%s, %s, %s, %s, %s, %s, %s) on conflict do nothing",
                 values,
             )
     return len(values)

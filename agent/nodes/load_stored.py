@@ -1,7 +1,5 @@
 import logging
 
-from langgraph.graph import END
-
 from agent.errors import record_error
 from agent.state import State
 from db import get_newsletter
@@ -26,4 +24,4 @@ def load_stored(state: State) -> dict:
 
 
 def after_load(state: State) -> str:
-    return END if state.get("from_store") else "fetch"
+    return "notify" if state.get("from_store") else "fetch"

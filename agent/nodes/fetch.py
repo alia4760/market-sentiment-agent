@@ -3,19 +3,14 @@ import logging
 from agent.errors import record_error
 from agent.state import State
 from sources.apewisdom import get_wsb_trending
-from sources.reddit import get_wsb_top_posts
 from sources.tradestie import get_tradestie
 
 log = logging.getLogger(__name__)
 
 
 def fetch(state: State) -> dict:
+    """Pull the two attention lists: ApeWisdom mentions and Tradestie comments and sentiment."""
     update: dict = {"errors": []}
-    try:
-        update["posts"] = get_wsb_top_posts()
-        log.info("Reddit: fetched %d posts", len(update["posts"]))
-    except Exception as e:
-        update["errors"].append(record_error("reddit", e))
     try:
         top = get_wsb_trending(limit=50)
         if not top:
