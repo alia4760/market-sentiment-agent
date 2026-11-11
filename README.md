@@ -54,7 +54,7 @@ flowchart LR
 Two attention lists pick the top 10 tickers. For those, the pipeline gathers prices, news and Reddit chatter, Jev labels the sentiment and the news catalysts, an LLM turns the facts into a stance per ticker, and the brief lands on Discord. Everything is saved to Postgres along the way.
 
 ## How it works
-The pipeline is a fixed LangGraph graph, one file per node in `agent/nodes/`. Facts and numbers come straight from data and fill a fixed template. Jev answers narrow classification questions, and one LLM call writes the opinions from those facts, so it cannot invent numbers.
+The pipeline is a fixed LangGraph graph, one file per node in `agent/nodes/`. After `rank`, three independent branches run in parallel (prices and earnings; news and its catalysts; Reddit evidence and its scores), and `brief` waits for all three. Facts and numbers come straight from data and fill a fixed template. Jev answers narrow classification questions, and one LLM call writes the opinions from those facts, so it cannot invent numbers.
 
 ```mermaid
 ---
@@ -81,13 +81,15 @@ graph TD;
 	__end__([<p>__end__</p>]):::last
 	__start__ --> load_stored;
 	brief --> summarize;
-	classify_news --> reddit_evidence;
+	classify_news --> brief;
 	fetch --> rank;
-	fetch_earnings --> research;
+	fetch_earnings --> brief;
 	fetch_prices --> fetch_earnings;
 	load_stored -.-> fetch;
 	load_stored -.-> notify;
 	rank --> fetch_prices;
+	rank --> reddit_evidence;
+	rank --> research;
 	reddit_evidence --> score_evidence;
 	render_pdf --> save;
 	research --> classify_news;
@@ -174,14 +176,13 @@ agent/             the LangGraph pipeline
   report.py        report text to the short Discord message and the PDF
   jev.py           the Jev classifier (sentiment and catalyst questions)
   nodes/           one file per node
-  diagram.py       prints the Mermaid diagram above and saves it to docs/pipeline.mmd
 db/                Neon storage, one file per table group
-docs/              pipeline.mmd, the generated graph diagram
+docs/              diagram.py (prints the graph above as Mermaid) and pipeline.mmd (its output)
 tests/             unit tests (uv run --with pytest pytest tests)
 evals/             baseline eval of Jev
 neon_database/     Neon project config
 ```
-After changing the graph, regenerate the diagram with `uv run python -m agent.diagram`. It prints the Mermaid source, saves it to `docs/pipeline.mmd` (the always-current copy) and you paste it into the block above.
+After changing the graph, regenerate the diagram with `uv run python -m docs.diagram`. It prints the Mermaid source, saves it to `docs/pipeline.mmd` (the always-current copy) and you paste it into the block above.
 
 ## Known limits
 - **Reddit coverage is patchy.** Arctic Shift often times out, so several tickers fall back to Tavily (snippets only, no votes). The report marks those as thin.

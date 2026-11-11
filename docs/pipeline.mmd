@@ -22,13 +22,15 @@ graph TD;
 	__end__([<p>__end__</p>]):::last
 	__start__ --> load_stored;
 	brief --> summarize;
-	classify_news --> reddit_evidence;
+	classify_news --> brief;
 	fetch --> rank;
-	fetch_earnings --> research;
+	fetch_earnings --> brief;
 	fetch_prices --> fetch_earnings;
 	load_stored -.-> fetch;
 	load_stored -.-> notify;
 	rank --> fetch_prices;
+	rank --> reddit_evidence;
+	rank --> research;
 	reddit_evidence --> score_evidence;
 	render_pdf --> save;
 	research --> classify_news;

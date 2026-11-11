@@ -1,13 +1,13 @@
 """Print the LangGraph pipeline as a Mermaid diagram and save it to docs/pipeline.mmd.
 
-Usage: uv run python -m agent.diagram
+Usage: uv run python -m docs.diagram
 Run it after changing the graph, then paste the output into the ```mermaid block in README.md.
 """
 from pathlib import Path
 
 from agent.graph import agent
 
-OUT = Path(__file__).resolve().parent.parent / "docs" / "pipeline.mmd"
+OUT = Path(__file__).resolve().parent / "pipeline.mmd"
 
 # LangGraph's default colours leave light text on a light fill in GitHub's dark theme.
 # Give every box an explicit fill, border and dark text so it reads in light and dark mode.
@@ -25,6 +25,5 @@ def build() -> str:
 
 if __name__ == "__main__":
     diagram = build()
-    OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(diagram)
     print(diagram)
