@@ -105,7 +105,7 @@ graph TD;
 10. **brief**: one LLM call writes an overview, up to 3 top picks and a stance, horizon and short take per ticker (`agent/prompts.py` holds the system prompt).
 11. **summarize**: fills the report template.
 12. **render_pdf**: renders the report as a designed PDF (header, market strip, top picks, one card per ticker with a stance badge and a sentiment bar).
-13. **save**: writes everything to Neon and archives the PDF in the Neon bucket (`briefs/<date>.pdf`). The report is stored only if no stage failed, so a rerun never reuses a report with gaps.
+13. **save**: writes the day's data and the LLM's per-ticker picks (`brief_picks`, flagged `degraded` if a stage failed) to Neon, and archives the PDF in the Neon bucket (`briefs/<date>.pdf`). The report text and PDF are stored only if no stage failed, so a rerun never reuses a report with gaps.
 14. **notify**: posts a short message (overview and top picks) with the PDF attached to Discord, once per day. On a rerun it posts the archived PDF from the bucket.
 
 A stage that fails is recorded and the rest keep going; the report still prints. At the end the run exits non-zero, so a scheduled job turns red and posts an alert to Discord.
@@ -186,7 +186,7 @@ After changing the graph, regenerate the diagram with `uv run python -m agent.di
 About 100 Jev calls, 10-20 Tavily credits and one LLM call (about 4,200 tokens in and 2,600 out on `gpt-6-luna`, well under a cent). The PDF is about 13 KB.
 
 ## Evals
-`evals/` holds a baseline check of Jev on 60 labeled finance tweets and headlines (about 83% accurate; labels under 0.5 confidence are right less than half the time). See [evals/README.md](evals/README.md).
+`evals/` holds a baseline check of Jev on 60 labeled finance tweets and headlines (about 83% accurate; labels under 0.5 confidence are right less than half the time). See [evals/README.md](evals/README.md). The plan for evaluating ticker matching and the picks themselves is in [ROADMAP.md](ROADMAP.md).
 
 ## Neon (database and storage)
 The Neon config lives in `neon_database/` (`neon.ts` declares the services). Run Neon CLI commands from inside that folder. To refresh the Neon variables in the root `.env`:
