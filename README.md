@@ -2,9 +2,23 @@
 LangGraph agent that finds which stocks are being talked about on Reddit and whether the talk is bullish or bearish.
 
 ## How it works
-A LangGraph pipeline: `load_stored` checks Neon for today's newsletter and stops there if it exists. Otherwise `fetch` pulls the day's top r/wallstreetbets posts (RSS, with post body) and the trending-ticker list (ApeWisdom), `score` classifies each post as bullish, bearish or neutral with the Jev decision model (`jev.py`), `summarize` renders a plain-text newsletter, and `save` writes the trending tickers, post scores and newsletter to Neon.
+A LangGraph pipeline: `load_stored` checks Neon for today's newsletter and stops there if it exists. Otherwise `fetch` pulls the day's top r/wallstreetbets posts (RSS, with post body) and the trending-ticker list (ApeWisdom), `score` classifies each post as bullish, bearish or neutral with the Jev decision model (`agent/jev.py`), `summarize` renders a plain-text newsletter, and `save` writes the trending tickers, post scores and newsletter to Neon.
 
 The goal is ticker-first: rank tickers by how much their mentions are rising, then use post sentiment as supporting evidence. See [ROADMAP.md](ROADMAP.md) for the approach and what's next, and [evals/](evals/README.md) for the Jev baseline eval.
+
+## Layout
+```
+main.py            entry point (--refresh, --collect-only)
+sources/           one file per outside data source: reddit, apewisdom, tradestie, prices, earnings, news
+agent/             the LangGraph pipeline
+  state.py         the shared State and the exit codes
+  graph.py         wires the nodes together
+  jev.py           the Jev sentiment classifier
+  nodes/           one file per node: load_stored, fetch, rank, fetch_prices, fetch_earnings, research, score, summarize, save
+db/                Neon storage, one file per table group
+evals/             baseline eval of Jev
+backfill.py        one-off history backfill (Tradestie and prices)
+```
 
 ## Run it
 Copy `.env.template.md` to `.env` and fill in your keys, then:
@@ -21,7 +35,7 @@ A stage that fails is recorded and the newsletter still prints, but the run exit
 `.github/workflows/daily.yml` runs `main.py` every day at 13:47 UTC (8:47am ET in winter; switch to 12:47 UTC when US summer time starts in March). It needs three repo secrets: `DATABASE_URL`, `JEV_API_KEY` and `TAVILY_API_KEY`. (`--collect-only` is available if you ever want a run with no Jev calls.) A failed stage makes the job fail, so GitHub emails you.
 
 ## What it stores
-Postgres tables in Neon, created on first use (`storage.py`). A rerun on the same day replaces that day's rows.
+Postgres tables in Neon, created on first use (`db/`). A rerun on the same day replaces that day's rows.
 - `trending_snapshots`: the day's top 50 tickers with mentions, mentions 24h ago, rank, and which were picked as candidates.
 - `post_scores`: each top post with its body, Jev label and confidence.
 - `newsletters`: the finished newsletter per day, with a `sent_at` column for a future email step.

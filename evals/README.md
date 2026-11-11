@@ -1,6 +1,6 @@
 # Jev sentiment eval
 
-Baseline check of the Jev classifier in `jev.py` (the same `SENTIMENT_QUESTION` the agent uses).
+Baseline check of the Jev classifier in `agent/jev.py` (the same `SENTIMENT_QUESTION` the agent uses).
 
 ```
 uv run evals/build_eval_set.py   # rebuild eval_set.csv (optional)

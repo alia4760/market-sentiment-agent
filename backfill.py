@@ -9,9 +9,9 @@ import argparse
 import time
 from datetime import timedelta
 
-from prices import get_prices
-from storage import save_prices, save_tradestie, today, tradestie_dates
-from tradestie import get_tradestie
+from sources.prices import get_prices
+from db import save_prices, save_tradestie, today, tradestie_dates
+from sources.tradestie import get_tradestie
 
 MIN_ROWS = 10  # skip days where Tradestie returns a near-empty list
 

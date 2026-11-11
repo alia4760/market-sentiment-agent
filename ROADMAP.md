@@ -17,7 +17,7 @@ Save each day's results so we can check them later.
 - Daily snapshot per ticker: date, mentions and change, bullish/bearish share, number of posts, price on the day.
 - Later, compare the price then vs now at 1 week, 1 month and 3 months, against SPY so market-wide moves don't look like wins.
 - Chart how each call played out, e.g. a static page built from the saved data.
-- Storage: Neon Postgres, plain SQL. Tables: `trending_snapshots`, `post_scores`, `newsletters`.
+- Storage: Neon Postgres, plain SQL. Tables: `trending_snapshots`, `tradestie_snapshots`, `daily_prices`, `ticker_news`, `post_scores`, `newsletters`.
 - Start saving from day one. Reddit sentiment can't be backfilled, and a 3-month check needs 3 months of data.
 
 ## Eval

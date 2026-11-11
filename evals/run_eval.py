@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from jev import classify_sentiment  # noqa: E402
+from agent.jev import classify_sentiment  # noqa: E402
 
 HERE = Path(__file__).parent
 LABELS = ["bullish", "bearish", "neutral"]

@@ -1,4 +1,9 @@
-from apewisdom import EXCLUDED_TICKERS, WORD_TICKERS, pick_candidates
+import logging
+
+from agent.state import State
+from sources.apewisdom import EXCLUDED_TICKERS, WORD_TICKERS, pick_candidates
+
+log = logging.getLogger(__name__)
 
 
 def rank_candidates(ape: list[dict], tradestie: list[dict], n: int = 10) -> list[dict]:
@@ -31,3 +36,15 @@ def rank_candidates(ape: list[dict], tradestie: list[dict], n: int = 10) -> list
         reverse=True,
     )
     return ranked[:n]
+
+
+def rank(state: State) -> dict:
+    """Merge ApeWisdom and Tradestie into the top-10 shortlist."""
+    if not state.get("top_tickers") and not state.get("tradestie"):
+        return {}
+    trending = rank_candidates(state.get("top_tickers") or [], state.get("tradestie") or [])
+    log.info(
+        "Ranked %d candidates: %s",
+        len(trending), ", ".join(f"{c['ticker']}({'+'.join(c['picked_by'])})" for c in trending),
+    )
+    return {"trending": trending}
